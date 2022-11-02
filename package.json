@@ -1,6 +1,6 @@
 {
-  "name": "chat-prototype",
-  "version": "0.1.0",
+  "name": "sympler-chat",
+  "version": "1.0.0",
   "private": true,
   "dependencies": {
     "@testing-library/jest-dom": "^5.16.4",
