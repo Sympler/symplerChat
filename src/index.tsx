@@ -221,8 +221,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint}) => {
   };
 
   useEffect(() => {
-    // setQuickButtons(buttons)
-    // toggleWidget()
+    
   }, []);
 
   console.log('file?', image)
