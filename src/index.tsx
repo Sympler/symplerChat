@@ -1,12 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Widget, addResponseMessage, setQuickButtons, addUserMessage, toggleMsgLoader, toggleWidget } from 'drew-react-chat-widget-custom';
-
-import './App.css'
 import 'drew-react-chat-widget-custom/lib/styles.css';
 import axios from 'axios';
-
-import logo from './sympler-logo.jpeg';
-
 interface MenuItems {
   label: string,
   value: string
@@ -238,7 +233,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint}) => {
     <div className="App">
       <Widget
         handleNewUserMessage={askQuestion}
-        profileAvatar={logo}
+        profileAvatar={'./sympler-logo.jpeg'}
         title="Messages"
         subtitle="Chipotle Questions"
         handleQuickButtonClicked={hanleQuckButtonClick}
