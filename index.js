@@ -259,6 +259,7 @@ var SymplerChat = function (_a) {
         toggleWidget();
     }, []);
     console.log('file?', image);
-    return (_jsx("div", __assign({ className: "App" }, { children: _jsx(Widget, { handleNewUserMessage: askQuestion, profileAvatar: './sympler-logo.jpeg', title: "Messages", subtitle: "Chipotle Questions", handleQuickButtonClicked: hanleQuckButtonClick, emojis: false, imagePreview: true, sendImageFile: sendImageFile }) })));
+    var logo = './sympler-logo.jpeg';
+    return (_jsx("div", __assign({ className: "App" }, { children: _jsx(Widget, { handleNewUserMessage: askQuestion, profileAvatar: logo, title: "Messages", subtitle: "Chipotle Questions", handleQuickButtonClicked: hanleQuckButtonClick, emojis: false, imagePreview: true, sendImageFile: sendImageFile }) })));
 };
 export default SymplerChat;
