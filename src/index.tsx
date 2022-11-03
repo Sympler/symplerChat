@@ -231,7 +231,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint}) => {
       <Widget
         handleNewUserMessage={askQuestion}
         title="Messages"
-        subtitle="Chipotle Questions"
+        subtitle="Sympler"
         handleQuickButtonClicked={hanleQuckButtonClick}
         emojis={false}
         imagePreview={true}

@@ -251,6 +251,6 @@ var SymplerChat = function (_a) {
     useEffect(function () {
     }, []);
     console.log('file?', image);
-    return (_jsx("div", __assign({ className: "App" }, { children: _jsx(Widget, { handleNewUserMessage: askQuestion, title: "Messages", subtitle: "Chipotle Questions", handleQuickButtonClicked: hanleQuckButtonClick, emojis: false, imagePreview: true, sendImageFile: sendImageFile }) })));
+    return (_jsx("div", __assign({ className: "App" }, { children: _jsx(Widget, { handleNewUserMessage: askQuestion, title: "Messages", subtitle: "Sympler", handleQuickButtonClicked: hanleQuckButtonClick, emojis: false, imagePreview: true, sendImageFile: sendImageFile }) })));
 };
 export default SymplerChat;
