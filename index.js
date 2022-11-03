@@ -53,7 +53,7 @@ import 'drew-react-chat-widget-custom/lib/styles.css';
 import axios from 'axios';
 import logo from './sympler-logo.jpeg';
 var SymplerChat = function (_a) {
-    var urlParam = _a.urlParam;
+    var formName = _a.formName, endpoint = _a.endpoint;
     var _b = useState(), formIoData = _b[0], setFormIoData = _b[1];
     var _c = useState([]), image = _c[0], setImage = _c[1];
     var _d = useState(false), sessionStarted = _d[0], setSessionStarted = _d[1];
@@ -70,7 +70,7 @@ var SymplerChat = function (_a) {
     }); };
     useEffect(function () {
         // {{projectUrl}}/form/{{formId}}
-        axios.get("https://mykkomypewprmxq.form.io/funform").then(function (res) {
+        axios.get("https://".concat(endpoint, ".form.io/").concat(formName)).then(function (res) {
             console.log('get results from formIo', res);
             setFormIoData(res);
         }).catch(function (error) {
@@ -83,7 +83,7 @@ var SymplerChat = function (_a) {
         return __generator(this, function (_a) {
             if (formIoData) {
                 if (formIoData.data._id && sessionStarted === false) {
-                    axios.get("https://mykkomypewprmxq.form.io/funform/submission/".concat(formIoData.data._id)).then(function (res) {
+                    axios.get("https://".concat(endpoint, ".form.io/").concat(formName, "/submission/").concat(formIoData.data._id)).then(function (res) {
                         console.log('the res from formIo submission', res);
                     }).catch(function (error) { return __awaiter(void 0, void 0, void 0, function () {
                         var key, obj;
@@ -95,7 +95,7 @@ var SymplerChat = function (_a) {
                                     obj = {};
                                     obj[key] = message;
                                     console.log('first obj', obj);
-                                    return [4 /*yield*/, axios.post("https://mykkomypewprmxq.form.io/funform/submission", {
+                                    return [4 /*yield*/, axios.post("https://".concat(endpoint, ".form.io/").concat(formName, "/submission"), {
                                             data: __assign({}, obj)
                                         }).then(function (result) {
                                             console.log('post create submission result', result);
@@ -116,7 +116,7 @@ var SymplerChat = function (_a) {
                 }
                 else if (formIoData.data._id && sessionStarted) {
                     // Get the previous submissions
-                    axios.get("https://mykkomypewprmxq.form.io/funform/submission/".concat(formSubmissionId)).then(function (res) { return __awaiter(void 0, void 0, void 0, function () {
+                    axios.get("https://".concat(endpoint, ".form.io/").concat(formName, "/submission/").concat(formSubmissionId)).then(function (res) { return __awaiter(void 0, void 0, void 0, function () {
                         var previousData, key, obj, base64Source, base64Response, blob, file, formData;
                         return __generator(this, function (_a) {
                             switch (_a.label) {
@@ -146,7 +146,7 @@ var SymplerChat = function (_a) {
                                         console.log('sympler result', result);
                                         var imageMessage = result.data.file;
                                         obj[key] = imageMessage;
-                                        axios.put("https://mykkomypewprmxq.form.io/funform/submission/".concat(formSubmissionId), {
+                                        axios.put("https://".concat(endpoint, ".form.io/").concat(formName, "/submission/").concat(formSubmissionId), {
                                             data: __assign(__assign({}, obj), previousData)
                                         }).then(function (result) {
                                             console.log('result from put', result);
@@ -164,7 +164,7 @@ var SymplerChat = function (_a) {
                                     console.log('obj on put', obj);
                                     console.log('obj previous', previousData);
                                     console.log('submission id', formIoData.data._id);
-                                    axios.put("https://mykkomypewprmxq.form.io/funform/submission/".concat(formSubmissionId), {
+                                    axios.put("https://".concat(endpoint, ".form.io/").concat(formName, "/submission/").concat(formSubmissionId), {
                                         data: __assign(__assign({}, obj), previousData)
                                     }).then(function (result) {
                                         console.log('result from put', result);

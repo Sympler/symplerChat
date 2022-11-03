@@ -45,12 +45,13 @@ interface UserResponse {
 }
 
 interface ChatProps {
-  urlParam: string
+  formName: string,
+  endpoint: string
 }
 
 
 
-const SymplerChat: React.FC<ChatProps> = ({urlParam}) => {
+const SymplerChat: React.FC<ChatProps> = ({formName, endpoint}) => {
   const [formIoData, setFormIoData] = useState<FormIoResponse>()
   const [image, setImage] = useState<TFile[]>([]);
   const [sessionStarted, setSessionStarted] = useState(false);
@@ -68,7 +69,7 @@ const SymplerChat: React.FC<ChatProps> = ({urlParam}) => {
 
   useEffect(() => {
     // {{projectUrl}}/form/{{formId}}
-    axios.get(`https://mykkomypewprmxq.form.io/funform`).then(res => {
+    axios.get(`https://${endpoint}.form.io/${formName}`).then(res => {
       console.log('get results from formIo', res)
       setFormIoData(res)
     }).catch(error => {
@@ -82,7 +83,7 @@ const SymplerChat: React.FC<ChatProps> = ({urlParam}) => {
   const submitData = async (message: string, index: number) => {
     if (formIoData) {
       if (formIoData.data._id && sessionStarted === false) {
-        axios.get(`https://mykkomypewprmxq.form.io/funform/submission/${formIoData.data._id}`).then(res => {
+        axios.get(`https://${endpoint}.form.io/${formName}/submission/${formIoData.data._id}`).then(res => {
           console.log('the res from formIo submission', res)
         }).catch(async error => {
           console.log('get submission error error', error)
@@ -90,7 +91,7 @@ const SymplerChat: React.FC<ChatProps> = ({urlParam}) => {
           const obj: any = {};
           obj[key] = message
           console.log('first obj', obj)
-          await axios.post(`https://mykkomypewprmxq.form.io/funform/submission`, {
+          await axios.post(`https://${endpoint}.form.io/${formName}/submission`, {
             data: {
               ...obj
             }
@@ -107,7 +108,7 @@ const SymplerChat: React.FC<ChatProps> = ({urlParam}) => {
         })
       } else if (formIoData.data._id && sessionStarted) {
         // Get the previous submissions
-        axios.get(`https://mykkomypewprmxq.form.io/funform/submission/${formSubmissionId}`).then(async res => {
+        axios.get(`https://${endpoint}.form.io/${formName}/submission/${formSubmissionId}`).then(async res => {
           console.log('get previous submission', res)
           const previousData = res.data.data
           const key = formIoData.data.components[index].key
@@ -131,7 +132,7 @@ const SymplerChat: React.FC<ChatProps> = ({urlParam}) => {
               console.log('sympler result', result)
               const imageMessage = result.data.file
               obj[key] = imageMessage
-              axios.put(`https://mykkomypewprmxq.form.io/funform/submission/${formSubmissionId}`, {
+              axios.put(`https://${endpoint}.form.io/${formName}/submission/${formSubmissionId}`, {
                 data: {
                   ...obj,
                   ...previousData
@@ -151,7 +152,7 @@ const SymplerChat: React.FC<ChatProps> = ({urlParam}) => {
             console.log('obj on put', obj)
             console.log('obj previous', previousData)
             console.log('submission id', formIoData.data._id)
-            axios.put(`https://mykkomypewprmxq.form.io/funform/submission/${formSubmissionId}`, {
+            axios.put(`https://${endpoint}.form.io/${formName}/submission/${formSubmissionId}`, {
               data: {
                 ...obj,
                 ...previousData

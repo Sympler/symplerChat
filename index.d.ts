@@ -6,7 +6,8 @@ export declare type TFile = {
     file: File;
 };
 interface ChatProps {
-    urlParam: string;
+    formName: string;
+    endpoint: string;
 }
 declare const SymplerChat: React.FC<ChatProps>;
 export default SymplerChat;
