@@ -1,7 +1,6 @@
 import { jsx as _jsx } from "react/jsx-runtime";
 import { useEffect, useState } from 'react';
 import { Widget, addResponseMessage, setQuickButtons, addUserMessage, toggleWidget } from 'drew-react-chat-widget-custom';
-import 'drew-react-chat-widget-custom/lib/styles.css';
 import axios from 'axios';
 var __assign = (this && this.__assign) || function () {
     __assign = Object.assign || function(t) {
