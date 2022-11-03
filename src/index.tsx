@@ -170,39 +170,37 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint}) => {
 
   const askQuestion = async (message?: string) => {
     if (formIoData) {
-      setTimeout( async() => {
-        if (index >= formIoData?.data.components.length - 1) {
-          console.log('all questions have been answered')
-        } else if (formIoData.data.components[index].label.includes('GetTimeZone')) {
-          setSubmit(true)
-          await submitData(newDate.slice(newDate.indexOf('('), newDate.lastIndexOf(')') + 1), index)
-          return
-        }
-        if (message && submit === false) {
-          console.log('image', image)
-          await submitData(message, index)
-          // addResponseMessage(formIoData.data.components[index].label)
-          if (formIoData.data.components[index].data) {
-            setQuickButtons(formIoData.data.components[index].data.values ?? [])
-          } else {
-            setQuickButtons([])
-          }
+      if (index >= formIoData?.data.components.length - 1) {
+        console.log('all questions have been answered')
+      } else if (formIoData.data.components[index].label.includes('GetTimeZone')) {
+        setSubmit(true)
+        await submitData(newDate.slice(newDate.indexOf('('), newDate.lastIndexOf(')') + 1), index)
+        return
+      }
+      if (message && submit === false) {
+        console.log('image', image)
+        await submitData(message, index)
+        // addResponseMessage(formIoData.data.components[index].label)
+        if (formIoData.data.components[index].data) {
+          setQuickButtons(formIoData.data.components[index].data.values ?? [])
         } else {
-          console.log('index before it adds reponse', index)
-          addResponseMessage(formIoData.data.components[index].label)
-          if (formIoData.data.components[index].data) {
-            console.log('hello why is this not working')
-            setQuickButtons(formIoData.data.components[index].data.values ?? [])
-          } else {
-            setQuickButtons([])
-          }
-          if (message) {
-            console.log('askquesion is being run not insided')
-            console.log('new message', message)
-            await submitData(message, index)
-          }
+          setQuickButtons([])
         }
-      }, 100)
+      } else {
+        console.log('index before it adds reponse', index)
+        addResponseMessage(formIoData.data.components[index].label)
+        if (formIoData.data.components[index].data) {
+          console.log('hello why is this not working')
+          setQuickButtons(formIoData.data.components[index].data.values ?? [])
+        } else {
+          setQuickButtons([])
+        }
+        if (message) {
+          console.log('askquesion is being run not insided')
+          console.log('new message', message)
+          await submitData(message, index)
+        }
+      }
     }
   }
 
@@ -235,7 +233,6 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint}) => {
     <div className="App">
       <Widget
         handleNewUserMessage={askQuestion}
-        profileAvatar={logo}
         title="Messages"
         subtitle="Chipotle Questions"
         handleQuickButtonClicked={hanleQuckButtonClick}

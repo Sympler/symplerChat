@@ -184,62 +184,56 @@ var SymplerChat = function (_a) {
         });
     }); };
     var askQuestion = function (message) { return __awaiter(void 0, void 0, void 0, function () {
-        return __generator(this, function (_a) {
-            if (formIoData) {
-                setTimeout(function () { return __awaiter(void 0, void 0, void 0, function () {
-                    var _a, _b;
-                    return __generator(this, function (_c) {
-                        switch (_c.label) {
-                            case 0:
-                                if (!(index >= (formIoData === null || formIoData === void 0 ? void 0 : formIoData.data.components.length) - 1)) return [3 /*break*/, 1];
-                                console.log('all questions have been answered');
-                                return [3 /*break*/, 3];
-                            case 1:
-                                if (!formIoData.data.components[index].label.includes('GetTimeZone')) return [3 /*break*/, 3];
-                                setSubmit(true);
-                                return [4 /*yield*/, submitData(newDate.slice(newDate.indexOf('('), newDate.lastIndexOf(')') + 1), index)];
-                            case 2:
-                                _c.sent();
-                                return [2 /*return*/];
-                            case 3:
-                                if (!(message && submit === false)) return [3 /*break*/, 5];
-                                console.log('image', image);
-                                return [4 /*yield*/, submitData(message, index)
-                                    // addResponseMessage(formIoData.data.components[index].label)
-                                ];
-                            case 4:
-                                _c.sent();
-                                // addResponseMessage(formIoData.data.components[index].label)
-                                if (formIoData.data.components[index].data) {
-                                    setQuickButtons((_a = formIoData.data.components[index].data.values) !== null && _a !== void 0 ? _a : []);
-                                }
-                                else {
-                                    setQuickButtons([]);
-                                }
-                                return [3 /*break*/, 7];
-                            case 5:
-                                console.log('index before it adds reponse', index);
-                                addResponseMessage(formIoData.data.components[index].label);
-                                if (formIoData.data.components[index].data) {
-                                    console.log('hello why is this not working');
-                                    setQuickButtons((_b = formIoData.data.components[index].data.values) !== null && _b !== void 0 ? _b : []);
-                                }
-                                else {
-                                    setQuickButtons([]);
-                                }
-                                if (!message) return [3 /*break*/, 7];
-                                console.log('askquesion is being run not insided');
-                                console.log('new message', message);
-                                return [4 /*yield*/, submitData(message, index)];
-                            case 6:
-                                _c.sent();
-                                _c.label = 7;
-                            case 7: return [2 /*return*/];
-                        }
-                    });
-                }); }, 100);
+        var _a, _b;
+        return __generator(this, function (_c) {
+            switch (_c.label) {
+                case 0:
+                    if (!formIoData) return [3 /*break*/, 7];
+                    if (!(index >= (formIoData === null || formIoData === void 0 ? void 0 : formIoData.data.components.length) - 1)) return [3 /*break*/, 1];
+                    console.log('all questions have been answered');
+                    return [3 /*break*/, 3];
+                case 1:
+                    if (!formIoData.data.components[index].label.includes('GetTimeZone')) return [3 /*break*/, 3];
+                    setSubmit(true);
+                    return [4 /*yield*/, submitData(newDate.slice(newDate.indexOf('('), newDate.lastIndexOf(')') + 1), index)];
+                case 2:
+                    _c.sent();
+                    return [2 /*return*/];
+                case 3:
+                    if (!(message && submit === false)) return [3 /*break*/, 5];
+                    console.log('image', image);
+                    return [4 /*yield*/, submitData(message, index)
+                        // addResponseMessage(formIoData.data.components[index].label)
+                    ];
+                case 4:
+                    _c.sent();
+                    // addResponseMessage(formIoData.data.components[index].label)
+                    if (formIoData.data.components[index].data) {
+                        setQuickButtons((_a = formIoData.data.components[index].data.values) !== null && _a !== void 0 ? _a : []);
+                    }
+                    else {
+                        setQuickButtons([]);
+                    }
+                    return [3 /*break*/, 7];
+                case 5:
+                    console.log('index before it adds reponse', index);
+                    addResponseMessage(formIoData.data.components[index].label);
+                    if (formIoData.data.components[index].data) {
+                        console.log('hello why is this not working');
+                        setQuickButtons((_b = formIoData.data.components[index].data.values) !== null && _b !== void 0 ? _b : []);
+                    }
+                    else {
+                        setQuickButtons([]);
+                    }
+                    if (!message) return [3 /*break*/, 7];
+                    console.log('askquesion is being run not insided');
+                    console.log('new message', message);
+                    return [4 /*yield*/, submitData(message, index)];
+                case 6:
+                    _c.sent();
+                    _c.label = 7;
+                case 7: return [2 /*return*/];
             }
-            return [2 /*return*/];
         });
     }); };
     useEffect(function () {
@@ -260,6 +254,6 @@ var SymplerChat = function (_a) {
     }, []);
     console.log('file?', image);
     var logo = 'public/icons/icon-384x384.png';
-    return (_jsx("div", __assign({ className: "App" }, { children: _jsx(Widget, { handleNewUserMessage: askQuestion, profileAvatar: logo, title: "Messages", subtitle: "Chipotle Questions", handleQuickButtonClicked: hanleQuckButtonClick, emojis: false, imagePreview: true, sendImageFile: sendImageFile }) })));
+    return (_jsx("div", __assign({ className: "App" }, { children: _jsx(Widget, { handleNewUserMessage: askQuestion, title: "Messages", subtitle: "Chipotle Questions", handleQuickButtonClicked: hanleQuckButtonClick, emojis: false, imagePreview: true, sendImageFile: sendImageFile }) })));
 };
 export default SymplerChat;
