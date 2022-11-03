@@ -253,7 +253,6 @@ var SymplerChat = function (_a) {
         toggleWidget();
     }, []);
     console.log('file?', image);
-    var logo = 'public/icons/icon-384x384.png';
     return (_jsx("div", __assign({ className: "App" }, { children: _jsx(Widget, { handleNewUserMessage: askQuestion, title: "Messages", subtitle: "Chipotle Questions", handleQuickButtonClicked: hanleQuckButtonClick, emojis: false, imagePreview: true, sendImageFile: sendImageFile }) })));
 };
 export default SymplerChat;
