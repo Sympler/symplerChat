@@ -1,4 +1,5 @@
 import React from 'react';
+import 'drew-react-chat-widget-custom/lib/styles.css';
 export declare type TFile = {
     source?: string;
     file: File;

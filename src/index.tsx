@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Widget, addResponseMessage, setQuickButtons, addUserMessage, toggleMsgLoader, toggleWidget } from 'drew-react-chat-widget-custom';
+import 'drew-react-chat-widget-custom/lib/styles.css';
 import axios from 'axios';
 interface MenuItems {
   label: string,

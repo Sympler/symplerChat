@@ -1,7 +1,3 @@
-import { jsx as _jsx } from "react/jsx-runtime";
-import { useEffect, useState } from 'react';
-import { Widget, addResponseMessage, setQuickButtons, addUserMessage, toggleWidget } from 'drew-react-chat-widget-custom';
-import axios from 'axios';
 var __assign = (this && this.__assign) || function () {
     __assign = Object.assign || function(t) {
         for (var s, i = 1, n = arguments.length; i < n; i++) {
@@ -49,6 +45,11 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+import { jsx as _jsx } from "react/jsx-runtime";
+import { useEffect, useState } from 'react';
+import { Widget, addResponseMessage, setQuickButtons, addUserMessage, toggleWidget } from 'drew-react-chat-widget-custom';
+import 'drew-react-chat-widget-custom/lib/styles.css';
+import axios from 'axios';
 var SymplerChat = function (_a) {
     var formName = _a.formName, endpoint = _a.endpoint;
     var _b = useState(), formIoData = _b[0], setFormIoData = _b[1];
