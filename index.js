@@ -1,6 +1,6 @@
 import { jsx as _jsx } from "react/jsx-runtime";
 import { useEffect, useState } from 'react';
-import { Widget, addResponseMessage, setQuickButtons, addUserMessage, toggleWidget } from 'drew-react-chat-widget-custom';
+import { Widget, addResponseMessage, setQuickButtons, addUserMessage } from 'drew-react-chat-widget-custom';
 import 'drew-react-chat-widget-custom/lib/styles.css';
 import axios from 'axios';
 var __assign = (this && this.__assign) || function () {
@@ -250,7 +250,7 @@ var SymplerChat = function (_a) {
     };
     useEffect(function () {
         // setQuickButtons(buttons)
-        toggleWidget();
+        // toggleWidget()
     }, []);
     console.log('file?', image);
     return (_jsx("div", __assign({ className: "App" }, { children: _jsx(Widget, { handleNewUserMessage: askQuestion, title: "Messages", subtitle: "Chipotle Questions", handleQuickButtonClicked: hanleQuckButtonClick, emojis: false, imagePreview: true, sendImageFile: sendImageFile }) })));
