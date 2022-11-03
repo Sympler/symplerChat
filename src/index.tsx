@@ -229,7 +229,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint}) => {
 
   console.log('file?', image)
   
-  const logo = './sympler-logo.jpeg'
+  const logo = 'public/icons/icon-384x384.png'
 
   return (
     <div className="App">
