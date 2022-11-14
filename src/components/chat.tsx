@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from 'react';
-import {Widget, addResponseMessage, setQuickButtons, addUserMessage, toggleWidget} from 'react-chat-widget-custom';
+import {Widget, addResponseMessage, setQuickButtons, addUserMessage, toggleWidget, toggleMsgLoader} from 'react-chat-widget-custom';
 import 'react-chat-widget-custom/lib/styles.css';
 import axios from 'axios';
 
@@ -50,27 +50,20 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint}) => {
   useEffect(() => {
     // {{projectUrl}}/form/{{formId}}
     axios.get(`https://${endpoint}.form.io/${formName}`).then(res => {
-      console.log('get results from formIo', res)
       setFormIoData(res)
     }).catch(error => {
       console.log('get error', error)
     })
   }, [])
 
-  console.log('submtting?', submit)
-  console.log('index', index)
-
   const submitData = async (message: string, index: number) => {
     if (formIoData) {
       if (formIoData.data._id && sessionStarted === false) {
         axios.get(`https://${endpoint}.form.io/${formName}/submission/${formIoData.data._id}`).then(res => {
-          console.log('the res from formIo submission', res)
         }).catch(async error => {
-          console.log('get submission error error', error)
           const key = formIoData.data.components[index].key
           const obj: any = {};
-          obj[key] = message
-          console.log('first obj', obj)
+          obj[key] = message          
           await axios.post(`https://${endpoint}.form.io/${formName}/submission`, {
             data: {
               ...obj
@@ -80,7 +73,6 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint}) => {
             setFormSubmissionId(result.data._id)
             setSessionStarted(true)
             setIndex(index + 1)
-            console.log('this is running lmao')
             setSubmit(false)
           }).catch(error => {
             console.log('error', error)
@@ -94,22 +86,27 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint}) => {
           const key = formIoData.data.components[index].key
           const obj: any = {};
           if (key === 'GDPR') {
-            if (message !== ('Yes')) {
-              console.log('end it here')
+            if (message === ('No Thanks')) {
               return
             }
           }
           if (message.includes('data:')) {
             const base64Source = message.slice(message.indexOf('(') + 1, message.lastIndexOf(')'))
             const base64Response = await fetch(base64Source)
+            console.log("base64response", base64Response)
             const blob = await base64Response.blob();
-            const file = new File([blob], `${formIoData.data.components[index].key}_fileUpload`)
+            console.log('base64 blob', blob)
+            // const file = new File([blob],  `${formIoData.data.components[index].key}_fileUpload_${new Date().toISOString()}`)
+            const file = blob.type === 'video/mp4' ? new File([blob],  `${formIoData.data.components[index].key}_fileUpload_${new Date().toISOString()}.mp4`, {type: 'video/mp4'}) : new File([blob],  `${formIoData.data.components[index].key}_fileUpload_${new Date().toISOString()}`)
+            console.log('file blbo', file)
             var formData = new FormData();
             formData.append('file', file)
-            axios.post(`https://dash-api.sympler.co/api/v1/uploadimage`,
+            toggleMsgLoader();
+            await axios.post(`https://dash-api.sympler.co/api/v1/uploadimage`,
               formData,
             ).then(result => {
               console.log('sympler result', result)
+              toggleMsgLoader();
               const imageMessage = result.data.file
               obj[key] = imageMessage
               axios.put(`https://${endpoint}.form.io/${formName}/submission/${formSubmissionId}`, {
