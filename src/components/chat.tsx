@@ -1,7 +1,8 @@
 import React, {useEffect, useState} from 'react';
-import {Widget, addResponseMessage, setQuickButtons, addUserMessage, toggleWidget, toggleMsgLoader} from 'react-chat-widget-custom';
+import {Widget, addResponseMessage, setQuickButtons, addUserMessage, toggleWidget, toggleMsgLoader, addLinkSnippet, renderCustomComponent} from 'react-chat-widget-custom';
 import 'react-chat-widget-custom/lib/styles.css';
 import axios from 'axios';
+import SliderInput from './slider/slider';
 
 export type TFile = {
   source?: string;
@@ -15,14 +16,19 @@ interface FormIoResponse {
         data: {
           values: [{
             label: string,
-            value: string
+            value: string,
           }]
         },
         input: boolean,
         key: string,
         label: string,
+        placeholder: string,
         tableView: boolean,
         type: string
+        values: [{
+          label: string,
+          value: string,
+        }]
       }
     ]
     data: any
@@ -156,7 +162,8 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint}) => {
         console.log('all questions have been answered')
       } else if (formIoData.data.components[index].label.includes('GetTimeZone')) {
         setSubmit(true)
-        await submitData(newDate.slice(newDate.indexOf('('), newDate.lastIndexOf(')') + 1), index)
+        let timezone = newDate.slice(newDate.indexOf('('), newDate.lastIndexOf(')') + 1)
+        await submitData(timezone.replace('(', '').replace(')', ''), index)
         return
       }
       if (message && submit === false) {
@@ -169,7 +176,23 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint}) => {
         }
       } else {
         console.log('index before it adds reponse', index)
+        
         addResponseMessage(formIoData.data.components[index].label)
+        if(formIoData.data.components[index].placeholder !== '' && formIoData.data.components[index].placeholder !== undefined) {
+          addLinkSnippet({
+            title: '',
+            link: formIoData.data.components[index].placeholder,
+            target: '_blank'
+          })
+        }
+        if(formIoData.data.components[index].type === 'radio') {
+          let labels = formIoData.data.components[index].values
+          const sliderResponse = async (value: string) => {
+            addUserMessage(value)
+            await submitData(value, index)
+          }
+          renderCustomComponent(SliderInput, {min: 0, max: labels.length - 1, labels: labels, confirmValue: sliderResponse}, false);
+        }
         if (formIoData.data.components[index].data) {
           console.log('hello why is this not working')
           setQuickButtons(formIoData.data.components[index].data.values ?? [])
