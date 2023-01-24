@@ -179,9 +179,10 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint}) => {
         
         addResponseMessage(formIoData.data.components[index].label)
         if(formIoData.data.components[index].placeholder !== '' && formIoData.data.components[index].placeholder !== undefined) {
+          const redemptionLink = formIoData.data.components[index].placeholder.replace('uid=1234', `uid=${formIoData.data._id}`).replace('campaign=1234', `campaign=${endpoint}`)
           addLinkSnippet({
             title: '',
-            link: formIoData.data.components[index].placeholder,
+            link: redemptionLink,
             target: '_blank'
           })
         }
