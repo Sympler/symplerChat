@@ -165,6 +165,23 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint}) => {
         let timezone = newDate.slice(newDate.indexOf('('), newDate.lastIndexOf(')') + 1)
         await submitData(timezone.replace('(', '').replace(')', ''), index)
         return
+      } else if (formIoData.data.components[index].label.includes('GetLocation')) {
+        setSubmit(true)
+        try {
+          let location = await axios.get('https://api.ipgeolocation.io/ipgeo?apiKey=902c52a386fb4db59dd7d4c98e2dba2a')
+          if (location) {
+            await submitData(location.data.country_name, index)
+            return
+          } else {
+            await submitData('Error getting location information', index)
+            return
+          }
+        } catch (error) {
+          console.error('Error ', error)
+          await submitData('Error getting location information', index)
+          return
+        }
+      
       }
       if (message && submit === false) {
         await submitData(message, index)
