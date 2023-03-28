@@ -68,8 +68,10 @@ const NavBar: React.FC = () => {
   }
 
   return (
-    <div style={{width: '175px', paddingLeft: '10%', paddingTop: '4rem'}}>
-      <BrandLogo/>
+    <div style={{width: '25vw'}}>
+      <div style={{width: '175px', margin: 'auto', paddingTop: '4rem'}}>
+        <BrandLogo/>
+      </div>
     </div>
   );
 }
