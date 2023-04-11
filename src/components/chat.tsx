@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from 'react';
-import {Widget, addResponseMessage, setQuickButtons, addUserMessage, toggleWidget, toggleMsgLoader, addLinkSnippet, renderCustomComponent} from 'react-chat-widget-custom';
+import {Widget, addResponseMessage, setQuickButtons, addUserMessage, toggleWidget, toggleMsgLoader, addLinkSnippet, renderCustomComponent, toggleInputDisabled} from 'react-chat-widget-custom';
 import 'react-chat-widget-custom/lib/styles.css';
 import axios from 'axios';
 import SliderInput from './slider/slider';
@@ -48,6 +48,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint}) => {
   const [sessionStarted, setSessionStarted] = useState(false);
   const [submit, setSubmit] = useState(false);
   const [index, setIndex] = useState(0)
+  const [inputDisabled, setInputDisabled] = useState(false);
 
   const [formSubmissionId, setFormSubmissionId] = useState('')
 
@@ -92,7 +93,8 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint}) => {
           const key = formIoData.data.components[index].key
           const obj: any = {};
           if (key === 'GDPR') {
-            if (message === ('No Thanks')) {
+            let normalizedMessage = message.toLowerCase()
+            if (normalizedMessage === ('no thanks') || normalizedMessage === ('no')) {
               return
             }
           }
@@ -186,14 +188,23 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint}) => {
       if (message && submit === false) {
         await submitData(message, index)
         // addResponseMessage(formIoData.data.components[index].label)
+        if (inputDisabled) {
+          toggleInputDisabled()
+          setInputDisabled(false)
+        }
         if (formIoData.data.components[index].data) {
+          toggleInputDisabled();
+          setInputDisabled(true)
           setQuickButtons(formIoData.data.components[index].data.values ?? [])
         } else {
           setQuickButtons([])
         }
       } else {
         console.log('index before it adds reponse', index)
-        
+        if (inputDisabled) {
+          toggleInputDisabled()
+          setInputDisabled(false)
+        }
         addResponseMessage(formIoData.data.components[index].label)
         if(formIoData.data.components[index].placeholder !== '' && formIoData.data.components[index].placeholder !== undefined) {
           const redemptionLink = formIoData.data.components[index].placeholder.replace('uid=1234', `uid=${formIoData.data._id}`).replace('campaign=1234', `campaign=${endpoint}`)
@@ -209,10 +220,13 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint}) => {
             addUserMessage(value)
             await submitData(value, index)
           }
+          toggleInputDisabled();
+          setInputDisabled(true)
           renderCustomComponent(SliderInput, {min: 0, max: labels.length - 1, labels: labels, confirmValue: sliderResponse}, false);
         }
         if (formIoData.data.components[index].data) {
-          console.log('hello why is this not working')
+          toggleInputDisabled();
+          setInputDisabled(true)
           setQuickButtons(formIoData.data.components[index].data.values ?? [])
         } else {
           setQuickButtons([])
