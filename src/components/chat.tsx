@@ -32,6 +32,7 @@ interface FormIoResponse {
       }
     ]
     data: any
+    title: string
     _id: string
   }
 }
@@ -162,6 +163,11 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint}) => {
     if (formIoData) {
       if (index >= formIoData?.data.components.length - 1) {
         console.log('all questions have been answered')
+        // @ts-ignore
+        window.gtag("event", `${formIoData.data.title} Form Completed`, {
+          event_category: "Form",
+          event_label: formIoData.data.title
+        });
       } else if (formIoData.data.components[index].label.includes('GetTimeZone')) {
         setSubmit(true)
         let timezone = newDate.slice(newDate.indexOf('('), newDate.lastIndexOf(')') + 1)
