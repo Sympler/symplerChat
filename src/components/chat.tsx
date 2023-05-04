@@ -207,7 +207,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
       } else if (formIoData.data.components[index].label.includes('RedemptionFlow')) {
         setSubmit(true)
         try {
-          if(uuid == null || shouldRedeem == null) {
+          if(uuid == null || shouldRedeem == null || shouldRedeem === 'false') {
             await submitData('invalidUrl', index)
             setShouldSendRedemptionLink(false)
           } else {
