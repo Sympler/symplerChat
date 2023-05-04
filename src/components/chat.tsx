@@ -40,27 +40,33 @@ interface FormIoResponse {
 interface ChatProps {
   formName?: string,
   endpoint?: string
+  shouldRedeem?: string | null,
+  uuid?: string | null
 }
 
 
 
-const SymplerChat: React.FC<ChatProps> = ({formName, endpoint}) => {
+const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uuid}) => {
   const [formIoData, setFormIoData] = useState<FormIoResponse>()
   const [sessionStarted, setSessionStarted] = useState(false);
   const [submit, setSubmit] = useState(false);
   const [index, setIndex] = useState(0)
   const [inputDisabled, setInputDisabled] = useState(false);
+  const [shouldSendRedemptionLink, setShouldSendRedemptionLink] = useState(true);
+  const [endSurveyResponses, setEndSurveyResponses] = useState([''])
+  const END_SURVEY = `Okay, thanks so much! We don't have any other questions for you at this time, but we hope to talk to you in another study soon. Have a great day!`
 
   const [formSubmissionId, setFormSubmissionId] = useState('')
 
   const newDate = new Date().toString();
+  console.log(shouldRedeem, uuid)
 
   useEffect(() => {
     // {{projectUrl}}/form/{{formId}}
     axios.get(`https://${endpoint}.form.io/${formName}`).then(res => {
       setFormIoData(res)
     }).catch(error => {
-      console.log('get error', error)
+      console.error('get error', error)
     })
   }, [])
 
@@ -89,7 +95,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint}) => {
       } else if (formIoData.data._id && sessionStarted) {
         // Get the previous submissions
         axios.get(`https://${endpoint}.form.io/${formName}/submission/${formSubmissionId}`).then(async res => {
-          console.log('get previous submission', res)
+          // console.log('get previous submission', res)
           const previousData = res.data.data
           const key = formIoData.data.components[index].key
           const obj: any = {};
@@ -102,19 +108,19 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint}) => {
           if (message.includes('data:')) {
             const base64Source = message.slice(message.indexOf('(') + 1, message.lastIndexOf(')'))
             const base64Response = await fetch(base64Source)
-            console.log("base64response", base64Response)
+            // console.log("base64response", base64Response)
             const blob = await base64Response.blob();
-            console.log('base64 blob', blob)
+            // console.log('base64 blob', blob)
             // const file = new File([blob],  `${formIoData.data.components[index].key}_fileUpload_${new Date().toISOString()}`)
             const file = blob.type === 'video/mp4' ? new File([blob],  `${formIoData.data.components[index].key}_fileUpload_${new Date().toISOString()}.mp4`, {type: 'video/mp4'}) : new File([blob],  `${formIoData.data.components[index].key}_fileUpload_${new Date().toISOString()}`)
-            console.log('file blbo', file)
+            // console.log('file blbo', file)
             var formData = new FormData();
             formData.append('file', file)
             toggleMsgLoader();
             await axios.post(`https://dash-api.sympler.co/api/v1/uploadimage`,
               formData,
             ).then(result => {
-              console.log('sympler result', result)
+              // console.log('sympler result', result)
               toggleMsgLoader();
               const imageMessage = result.data.file
               obj[key] = imageMessage
@@ -128,31 +134,39 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint}) => {
                 setIndex(index + 1)
                 setSubmit(false)
               }).catch(error => {
-                console.log('error', error)
+                console.error('error', error)
               })
             }).catch(error => {
-              console.log('error sending the image to sympler', error)
+              console.error('error sending the image to sympler', error)
             })
           } else {
             obj[key] = message
-            console.log('obj on put', obj)
-            console.log('obj previous', previousData)
-            console.log('submission id', formIoData.data._id)
+            // console.log('obj on put', obj)
+            // console.log('obj previous', previousData)
+            // console.log('submission id', formIoData.data._id)
             axios.put(`https://${endpoint}.form.io/${formName}/submission/${formSubmissionId}`, {
               data: {
                 ...obj,
                 ...previousData
               }
             }).then(result => {
-              console.log('result from put', result)
-              setIndex(index + 1)
+              // console.log('result from put', result)
+              // console.log('message', message)
+              
+              if (endSurveyResponses.includes(message)) {
+                setIndex(1000)
+              } else if (message.includes('invalidUrl')) {
+                setIndex(1000)
+              } else {
+                setIndex(index + 1)
+              }
               setSubmit(false)
             }).catch(error => {
-              console.log('error', error)
+              console.error('error', error)
             })
           }
         }).catch(error => {
-          console.log('couldnt get submission', error)
+          console.error('Could not get submission', error)
         })
 
       }
@@ -190,6 +204,21 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint}) => {
           return
         }
       
+      } else if (formIoData.data.components[index].label.includes('RedemptionFlow')) {
+        setSubmit(true)
+        try {
+          if(uuid == null || shouldRedeem == null) {
+            await submitData('invalidUrl', index)
+            setShouldSendRedemptionLink(false)
+          } else {
+            await submitData('validUrl', index)
+          }
+          return
+        } catch (error) {
+          console.error('Error ', error)
+          await submitData('Error', index)
+          return
+        }
       }
       if (message && submit === false) {
         await submitData(message, index)
@@ -201,24 +230,31 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint}) => {
         if (formIoData.data.components[index].data) {
           toggleInputDisabled();
           setInputDisabled(true)
+
           setQuickButtons(formIoData.data.components[index].data.values ?? [])
         } else {
           setQuickButtons([])
         }
-      } else {
-        console.log('index before it adds reponse', index)
+      } else if (index !== 1000) {
+        // console.log('index before it adds reponse', index)
         if (inputDisabled) {
           toggleInputDisabled()
           setInputDisabled(false)
         }
         addResponseMessage(formIoData.data.components[index].label)
-        if(formIoData.data.components[index].placeholder !== '' && formIoData.data.components[index].placeholder !== undefined) {
-          const redemptionLink = formIoData.data.components[index].placeholder.replace('uid=1234', `uid=${formSubmissionId}`).replace('campaign=1234', `campaign=${formIoData.data.title}`).replace(/ /g,"-");
-          addLinkSnippet({
-            title: '',
-            link: redemptionLink,
-            target: '_blank'
-          })
+        if(formIoData.data.components[index].placeholder !== '' && formIoData.data.components[index].placeholder !== undefined && shouldSendRedemptionLink) {
+          let redemptionLink = formIoData.data.components[index].placeholder.replace('uid=1234', `uid=${formSubmissionId}`).replace('campaign=1234', `campaign=${formIoData.data.title}`).replace(/ /g,"-");
+          if (uuid && shouldRedeem && shouldRedeem !== 'false'){
+            redemptionLink = formIoData.data.components[index].placeholder.replace('uid=1234', `uid=${uuid}`).replace('campaign=1234', `campaign=${formIoData.data.title}`).replace(/ /g,"-");
+          }
+          if ((!shouldRedeem && !uuid) || (uuid && shouldRedeem && shouldRedeem !== 'false')){
+            addLinkSnippet({
+              title: '',
+              link: redemptionLink,
+              target: '_blank'
+            })
+          }
+
         }
         if(formIoData.data.components[index].type === 'radio') {
           let labels = formIoData.data.components[index].values
@@ -233,16 +269,22 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint}) => {
         if (formIoData.data.components[index].data) {
           toggleInputDisabled();
           setInputDisabled(true)
+          setEndSurveyResponses(formIoData.data.components[index].data.values.filter(v => v.value.includes('END_SURVEY') ? v : null).map(v => v.label))
+          formIoData.data.components[index].data.values.map(v => v.value = v.label)
           setQuickButtons(formIoData.data.components[index].data.values ?? [])
         } else {
           setQuickButtons([])
         }
         if (message) {
-          console.log('askquesion is being run not insided')
-          console.log('new message', message)
+          // console.log('askquesion is being run not insided')
+          // console.log('new message', message)
           await submitData(message, index)
         }
+      } else {
+        addResponseMessage(END_SURVEY)
+        setQuickButtons([])
       }
+     
     }
   }
 
@@ -255,7 +297,6 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint}) => {
   //   if (image.length >= 1) {
   //   }, [image])
 
-  console.log('form', formIoData)
 
   const hanleQuckButtonClick = (e: string) => {
     addUserMessage(e);
