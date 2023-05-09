@@ -55,8 +55,8 @@ const App: React.FC<ChatProps> = () => {
       const params = Object.fromEntries(urlSearchParams.entries());
       let endpoint = params.endpoint;
       let formName = params.formName;
-      let shouldRedeem = params.shouldredeem;
-      let uuid = params.uuid;
+      let shouldRedeem = params.status;
+      let uuid = params.uid;
 
       setUuid(uuid)
       setShouldRedeem(shouldRedeem);
