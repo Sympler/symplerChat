@@ -207,7 +207,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
       } else if (formIoData.data.components[index].label.includes('RedemptionFlow')) {
         setSubmit(true)
         try {
-          if(uuid == null || shouldRedeem == null || shouldRedeem === 'Terminate' || shouldRedeem === 'OQ' || shouldRedeem !== 'Complete') {
+          if(uuid == null || shouldRedeem == null || shouldRedeem === '2' || shouldRedeem === '3' || shouldRedeem !== '1') {
             await submitData('invalidUrl', index)
             setShouldSendRedemptionLink(false)
           } else {
@@ -244,10 +244,10 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
         addResponseMessage(formIoData.data.components[index].label)
         if(formIoData.data.components[index].placeholder !== '' && formIoData.data.components[index].placeholder !== undefined && shouldSendRedemptionLink) {
           let redemptionLink = formIoData.data.components[index].placeholder.replace('uid=1234', `uid=${formSubmissionId}`).replace('campaign=1234', `campaign=${formIoData.data.title}`).replace(/ /g,"-");
-          if (uuid && shouldRedeem && shouldRedeem !== 'Terminate' && shouldRedeem !== 'OQ' && shouldRedeem === 'Complete'){
+          if (uuid && shouldRedeem && shouldRedeem !== '2' && shouldRedeem !== '3' && shouldRedeem === '1'){
             redemptionLink = formIoData.data.components[index].placeholder.replace('uid=1234', `uid=${uuid}`).replace('campaign=1234', `campaign=${formIoData.data.title}`).replace(/ /g,"-");
           }
-          if ((!shouldRedeem && !uuid) || (uuid && shouldRedeem && shouldRedeem !== 'Terminate' && shouldRedeem !== 'OQ' && shouldRedeem === 'Complete')){
+          if ((!shouldRedeem && !uuid) || (uuid && shouldRedeem && shouldRedeem !== '2' && shouldRedeem !== '3' && shouldRedeem === '1')){
             addLinkSnippet({
               title: '',
               link: redemptionLink,
