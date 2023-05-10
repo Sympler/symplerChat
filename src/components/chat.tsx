@@ -207,7 +207,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
       } else if (formIoData.data.components[index].label.includes('RedemptionFlow')) {
         setSubmit(true)
         try {
-          if(uuid == null || shouldRedeem == null || shouldRedeem === 'false') {
+          if(uuid == null || shouldRedeem == null || shouldRedeem === 'Terminate' || shouldRedeem === 'OQ' || shouldRedeem !== 'Complete') {
             await submitData('invalidUrl', index)
             setShouldSendRedemptionLink(false)
           } else {
@@ -244,10 +244,10 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
         addResponseMessage(formIoData.data.components[index].label)
         if(formIoData.data.components[index].placeholder !== '' && formIoData.data.components[index].placeholder !== undefined && shouldSendRedemptionLink) {
           let redemptionLink = formIoData.data.components[index].placeholder.replace('uid=1234', `uid=${formSubmissionId}`).replace('campaign=1234', `campaign=${formIoData.data.title}`).replace(/ /g,"-");
-          if (uuid && shouldRedeem && shouldRedeem !== 'false'){
+          if (uuid && shouldRedeem && shouldRedeem !== 'Terminate' && shouldRedeem !== 'OQ' && shouldRedeem === 'Complete'){
             redemptionLink = formIoData.data.components[index].placeholder.replace('uid=1234', `uid=${uuid}`).replace('campaign=1234', `campaign=${formIoData.data.title}`).replace(/ /g,"-");
           }
-          if ((!shouldRedeem && !uuid) || (uuid && shouldRedeem && shouldRedeem !== 'false')){
+          if ((!shouldRedeem && !uuid) || (uuid && shouldRedeem && shouldRedeem !== 'Terminate' && shouldRedeem !== 'OQ' && shouldRedeem === 'Complete')){
             addLinkSnippet({
               title: '',
               link: redemptionLink,
@@ -292,6 +292,9 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
     askQuestion()
   }, [index, formIoData])
 
+  useEffect(() => {
+    
+  })
   // useEffect(() => {
   //   console.log('image being passed to', image)
   //   if (image.length >= 1) {
@@ -310,6 +313,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
   return (
     <div className="App">
       <Widget
+        quickButtonsInMessage={true}
         handleNewUserMessage={askQuestion}
         title="Messages"
         subtitle="Sympler"
