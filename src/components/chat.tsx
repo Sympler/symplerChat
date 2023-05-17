@@ -176,6 +176,13 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
   const askQuestion = async (message?: string) => {
     if (formIoData) {
       if (index >= formIoData?.data.components.length - 1) {
+        const setCookie = (cname: string, exdays: number, cvalue?: string) => {
+          const d = new Date();
+          d.setTime(d.getTime() + (exdays*24*60*60*1000));
+          let expires = "expires="+ d.toUTCString();
+          document.cookie = cname + "=" + cvalue + ";" + expires + ";path=/";
+        }
+        setCookie(`SESSIONFORM${formName}`, 365, formName)
         console.log('all questions have been answered')
         // @ts-ignore
         window.gtag("event", `${formIoData.data.title} Form Completed`, {

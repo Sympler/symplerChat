@@ -47,7 +47,8 @@ const App: React.FC<ChatProps> = () => {
   const [formName, setFormName] = useState<string | null>(null);
   const [shouldRedeem, setShouldRedeem] = useState<string | null>(null);
   const [uuid, setUuid] = useState<string | null>(null);
-
+  const [cookiePresent, setCookiePresent] = useState(false);
+  const END_SURVEY = `Okay, thanks so much! We don't have any other questions for you at this time, but we hope to talk to you in another study soon. Have a great day!`
   useEffect(() => {
     const isBrowser = typeof window !== "undefined"
     if (isBrowser) {
@@ -62,15 +63,30 @@ const App: React.FC<ChatProps> = () => {
       setShouldRedeem(shouldRedeem);
       setEndpoint(endpoint);
       setFormName(formName);
+
+      if (formName && document.cookie.includes(`SESSIONFORM${formName}=${formName}`)) {
+        setCookiePresent(true)
+      }
     }
   }, []);
   
   return (
     <div className="App">
       <NavBar />
-      {endpoint && formName && (
+      {endpoint && formName && !cookiePresent ?(
         <SymplerChat endpoint={endpoint} formName={formName} shouldRedeem={shouldRedeem} uuid={uuid} />
-      )}
+      ):
+      <div style={{
+        padding: '20px',
+        width: '80%',
+        textAlign: 'center',
+        position: 'absolute',
+        right: 0,
+        top: '50%',
+      }}>
+        <h2>{END_SURVEY}</h2>
+      </div>
+      }
     </div>
   );
 }
