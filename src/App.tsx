@@ -48,7 +48,10 @@ const App: React.FC<ChatProps> = () => {
   const [shouldRedeem, setShouldRedeem] = useState<string | null>(null);
   const [uuid, setUuid] = useState<string | null>(null);
   const [cookiePresent, setCookiePresent] = useState(false);
+  const [isVpn, setIsVpn] = useState(false);
+
   const END_SURVEY = `Okay, thanks so much! We don't have any other questions for you at this time, but we hope to talk to you in another study soon. Have a great day!`
+  const VPN_USER = `Please disable your vpn to continue with the survey.`
   useEffect(() => {
     const isBrowser = typeof window !== "undefined"
     if (isBrowser) {
@@ -69,11 +72,28 @@ const App: React.FC<ChatProps> = () => {
       }
     }
   }, []);
-  
+
+  useEffect(() => {
+    const getIp = async() => {
+      try {
+        const ipResponse = await axios.get('https://api.ipgeolocation.io/ipgeo?apiKey=902c52a386fb4db59dd7d4c98e2dba2a');
+        const ip = ipResponse.data.ip
+        const vpnCheck = await axios.get(`https://dash-api.sympler.co/api/v1/vpncheck/${ip}`);
+        if (vpnCheck.data.response.block === 1) {
+          setIsVpn(true)
+        }
+      } catch (error) {
+        console.error(error)
+      }
+    }
+    getIp()
+    
+  },[])
+
   return (
     <div className="App">
       <NavBar />
-      {endpoint && formName && !cookiePresent ?(
+      {endpoint && formName && !cookiePresent && !isVpn ?(
         <SymplerChat endpoint={endpoint} formName={formName} shouldRedeem={shouldRedeem} uuid={uuid} />
       ):
       <div style={{
@@ -84,7 +104,7 @@ const App: React.FC<ChatProps> = () => {
         right: 0,
         top: '50%',
       }}>
-        <h2>{END_SURVEY}</h2>
+        <h2>{isVpn ? VPN_USER : END_SURVEY}</h2>
       </div>
       }
     </div>
