@@ -54,12 +54,17 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
   const [inputDisabled, setInputDisabled] = useState(false);
   const [shouldSendRedemptionLink, setShouldSendRedemptionLink] = useState(true);
   const [endSurveyResponses, setEndSurveyResponses] = useState([''])
-  const END_SURVEY = `Okay, thanks so much! We don't have any other questions for you at this time, but we hope to talk to you in another study soon. Have a great day!`
-
+  const [cookiePresent, setCookiePresent] = useState(false);
+  const [isVpn, setIsVpn] = useState(false);
   const [formSubmissionId, setFormSubmissionId] = useState('')
+  const [location, setLocation] = useState<any>();
+  const [cookieCheck, setCookieCheck] = useState(false);
+  const END_SURVEY = `Okay, thanks so much! We don't have any other questions for you at this time, but we hope to talk to you in another study soon. Have a great day!`
+  const VPN_USER = `Please disable your vpn and refresh the page to continue with the survey.`
+  
 
   const newDate = new Date().toString();
-  console.log(shouldRedeem, uuid)
+
 
   useEffect(() => {
     // {{projectUrl}}/form/{{formId}}
@@ -69,6 +74,37 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
       console.error('get error', error)
     })
   }, [])
+
+  useEffect(() => {
+    if (formName && document.cookie.includes(`SESSIONFORM${formName}=${formName}`)) {
+      setCookiePresent(true)
+      setCookieCheck(true)
+      setIndex(1000)
+    }
+  },[formName])
+
+  useEffect(() => {
+    const getIp = async() => {
+      try {
+        const ipResponse = await axios.get('https://api.ipgeolocation.io/ipgeo?apiKey=902c52a386fb4db59dd7d4c98e2dba2a&ip=8.8.8.8');
+        setLocation(ipResponse.data)
+        const ip = ipResponse.data.ip
+        const vpnCheck = await axios.get(`https://dash-api.sympler.co/api/v1/vpncheck/${ip}`);
+        if (vpnCheck.data.response.block === 1) {
+          setIsVpn(true)
+          if (!cookiePresent) {
+            setIndex(1001)
+            addResponseMessage(VPN_USER)
+          }
+        }
+      } catch (error) {
+        console.error(error)
+      }
+    }
+    if (cookieCheck) {
+      getIp()
+    }
+  },[cookieCheck])
 
   const submitData = async (message: string, index: number) => {
     if (formIoData) {
@@ -83,13 +119,13 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
               ...obj
             }
           }).then(result => {
-            console.log('post create submission result', result)
+            // console.log('post create submission result', result)
             setFormSubmissionId(result.data._id)
             setSessionStarted(true)
             setIndex(index + 1)
             setSubmit(false)
           }).catch(error => {
-            console.log('error', error)
+            console.error('error', error)
           })
         })
       } else if (formIoData.data._id && sessionStarted) {
@@ -130,7 +166,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
                   ...previousData
                 }
               }).then(result => {
-                console.log('result from put', result)
+                // console.log('result from put', result)
                 setIndex(index + 1)
                 setSubmit(false)
               }).catch(error => {
@@ -155,8 +191,10 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
               
               if (endSurveyResponses.includes(message)) {
                 setIndex(1000)
+                toggleInputDisabled()
               } else if (message.includes('invalidUrl')) {
                 setIndex(1000)
+                toggleInputDisabled()
               } else {
                 setIndex(index + 1)
               }
@@ -182,13 +220,15 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           let expires = "expires="+ d.toUTCString();
           document.cookie = cname + "=" + cvalue + ";" + expires + ";path=/";
         }
-        setCookie(`SESSIONFORM${formName}`, 365, formName)
-        console.log('all questions have been answered')
-        // @ts-ignore
-        window.gtag("event", `${formIoData.data.title} Form Completed`, {
-          event_category: "Form",
-          event_label: formIoData.data.title
-        });
+        if (index !== 1001) {
+          setCookie(`SESSIONFORM${formName}`, 365, formName)
+          // console.log('all questions have been answered')
+          // @ts-ignore
+          window.gtag("event", `${formIoData.data.title} Form Completed`, {
+            event_category: "Form",
+            event_label: formIoData.data.title
+          });
+        }
       } else if (formIoData.data.components[index].label.includes('GetTimeZone')) {
         setSubmit(true)
         let timezone = newDate.slice(newDate.indexOf('('), newDate.lastIndexOf(')') + 1)
@@ -197,9 +237,12 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
       } else if (formIoData.data.components[index].label.includes('GetLocation')) {
         setSubmit(true)
         try {
-          let location = await axios.get('https://api.ipgeolocation.io/ipgeo?apiKey=902c52a386fb4db59dd7d4c98e2dba2a')
+          if (!location) {
+            let l = await axios.get('https://api.ipgeolocation.io/ipgeo?apiKey=902c52a386fb4db59dd7d4c98e2dba2a')
+            setLocation(l.data)
+          }
           if (location) {
-            await submitData(location.data.country_name, index)
+            await submitData(location?.country_name, index)
             return
           } else {
             await submitData('Error getting location information', index)
@@ -211,6 +254,21 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           return
         }
       
+      } else if (formIoData.data.components[index].label.includes('StateProvince')){
+        if (!location) {
+          let l = await axios.get('https://api.ipgeolocation.io/ipgeo?apiKey=902c52a386fb4db59dd7d4c98e2dba2a')
+          setLocation(l.data)
+        }
+        if (!formIoData.data.components[index].data.values.map(v => v.label.toLowerCase()).includes(location?.state_prov.toLowerCase()) ) {
+          if (!isVpn) {
+            setIndex(1000)
+          }
+          toggleInputDisabled()
+          return
+        } else {
+          await submitData(location?.state_prov, index)
+          return
+        }
       } else if (formIoData.data.components[index].label.includes('RedemptionFlow')) {
         setSubmit(true)
         try {
@@ -290,6 +348,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
       } else {
         addResponseMessage(END_SURVEY)
         setQuickButtons([])
+        toggleInputDisabled()
       }
      
     }
