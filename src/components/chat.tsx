@@ -240,12 +240,15 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           if (!location) {
             let l = await axios.get('https://api.ipgeolocation.io/ipgeo?apiKey=902c52a386fb4db59dd7d4c98e2dba2a')
             setLocation(l.data)
-          }
-          if (location) {
-            await submitData(location?.country_name, index)
-            return
+            if (l) {
+              await submitData(l.data?.country_name, index)
+              return
+            } else {
+              await submitData('Error getting location information', index)
+              return
+            }
           } else {
-            await submitData('Error getting location information', index)
+            await submitData(location?.country_name, index)
             return
           }
         } catch (error) {
