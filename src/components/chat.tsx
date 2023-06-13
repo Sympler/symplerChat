@@ -61,6 +61,8 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
   const [cookieCheck, setCookieCheck] = useState(false);
   const END_SURVEY = `Okay, thanks so much! We don't have any other questions for you at this time, but we hope to talk to you in another study soon. Have a great day!`
   const VPN_USER = `Please disable your vpn and refresh the page to continue with the survey.`
+  // const formIoUrl = `https://${endpoint}.form.io/${formName}`
+  const formIoUrl = `https://forms.sympler.co/${formName}`
   
 
   const newDate = new Date().toString();
@@ -68,7 +70,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
 
   useEffect(() => {
     // {{projectUrl}}/form/{{formId}}
-    axios.get(`https://${endpoint}.form.io/${formName}`).then(res => {
+    axios.get(formIoUrl).then(res => {
       setFormIoData(res)
     }).catch(error => {
       console.error('get error', error)
@@ -109,12 +111,12 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
   const submitData = async (message: string, index: number) => {
     if (formIoData) {
       if (formIoData.data._id && sessionStarted === false) {
-        axios.get(`https://${endpoint}.form.io/${formName}/submission/${formIoData.data._id}`).then(res => {
+        axios.get(`${formIoUrl}/submission/${formIoData.data._id}`).then(res => {
         }).catch(async error => {
           const key = formIoData.data.components[index].key
           const obj: any = {};
           obj[key] = message          
-          await axios.post(`https://${endpoint}.form.io/${formName}/submission`, {
+          await axios.post(`${formIoUrl}/submission`, {
             data: {
               ...obj
             }
@@ -130,7 +132,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
         })
       } else if (formIoData.data._id && sessionStarted) {
         // Get the previous submissions
-        axios.get(`https://${endpoint}.form.io/${formName}/submission/${formSubmissionId}`).then(async res => {
+        axios.get(`${formIoUrl}/submission/${formSubmissionId}`).then(async res => {
           // console.log('get previous submission', res)
           const previousData = res.data.data
           const key = formIoData.data.components[index].key
@@ -160,7 +162,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
               toggleMsgLoader();
               const imageMessage = result.data.file
               obj[key] = imageMessage
-              axios.put(`https://${endpoint}.form.io/${formName}/submission/${formSubmissionId}`, {
+              axios.put(`${formIoUrl}/submission/${formSubmissionId}`, {
                 data: {
                   ...obj,
                   ...previousData
@@ -180,7 +182,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
             // console.log('obj on put', obj)
             // console.log('obj previous', previousData)
             // console.log('submission id', formIoData.data._id)
-            axios.put(`https://${endpoint}.form.io/${formName}/submission/${formSubmissionId}`, {
+            axios.put(`${formIoUrl}/submission/${formSubmissionId}`, {
               data: {
                 ...obj,
                 ...previousData
