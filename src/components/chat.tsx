@@ -23,6 +23,7 @@ interface FormIoResponse {
         key: string,
         label: string,
         placeholder: string,
+        description: string,
         tableView: boolean,
         type: string
         values: [{
@@ -43,7 +44,10 @@ interface ChatProps {
   shouldRedeem?: string | null,
   uuid?: string | null
 }
-
+interface formVariablesProps {
+  key: string,
+  value: string,
+}
 
 
 const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uuid}) => {
@@ -63,10 +67,10 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
   const VPN_USER = `Please disable your vpn and refresh the page to continue with the survey.`
   // const formIoUrl = `https://${endpoint}.form.io/${formName}`
   const formIoUrl = `https://forms.sympler.co/${formName}`
+  const [formVariables, setFormVariables] = useState<Array<formVariablesProps>>([])
   
 
   const newDate = new Date().toString();
-
 
   useEffect(() => {
     // {{projectUrl}}/form/{{formId}}
@@ -110,6 +114,22 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
 
   const submitData = async (message: string, index: number) => {
     if (formIoData) {
+      if (formIoData.data.components[index].description) {
+        let varName = formIoData.data.components[index].description
+        var startIndex = varName.indexOf("{{") + 2;
+        var endIndex = varName.indexOf("}}");
+        var result = varName.substring(startIndex, endIndex);
+
+        if (formVariables.length > 0) {
+          formVariables.map(v => {
+            if (v.key !== result) {
+              setFormVariables([...formVariables, {key: result, value: message}])
+            }
+          })
+        } else {
+          setFormVariables([{key: result, value: message}])
+        }
+      }
       if (formIoData.data._id && sessionStarted === false) {
         axios.get(`${formIoUrl}/submission/${formIoData.data._id}`).then(res => {
         }).catch(async error => {
@@ -307,11 +327,22 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
         }
       } else if (index !== 1000) {
         // console.log('index before it adds reponse', index)
+        let responseText = formIoData.data.components[index].label
+        if (formIoData.data.components[index].label.match(/{{(.*?)}}/g)) {
+          let matches = formIoData.data.components[index].label.match(/{{(.*?)}}/g);
+          console.log('matches', matches);
+          formVariables.map(v => {
+            if (matches?.includes(`{{${v.key}}}`)) {
+              console.log('yeppydoodle')
+              responseText = formIoData.data.components[index].label.replaceAll(`{{${v.key}}}`, v.value)
+            }
+          })
+        }
         if (inputDisabled) {
           toggleInputDisabled()
           setInputDisabled(false)
         }
-        addResponseMessage(formIoData.data.components[index].label)
+        addResponseMessage(responseText)
         if(formIoData.data.components[index].placeholder !== '' && formIoData.data.components[index].placeholder !== undefined && shouldSendRedemptionLink) {
           let redemptionLink = formIoData.data.components[index].placeholder.replace('uid=1234', `uid=${formSubmissionId}`).replace('campaign=1234', `campaign=${formIoData.data.title}`).replace(/ /g,"-");
           if (uuid && shouldRedeem && shouldRedeem !== '2' && shouldRedeem !== '3' && shouldRedeem === '1'){
