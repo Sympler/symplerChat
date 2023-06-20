@@ -170,7 +170,30 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
             const blob = await base64Response.blob();
             // console.log('base64 blob', blob)
             // const file = new File([blob],  `${formIoData.data.components[index].key}_fileUpload_${new Date().toISOString()}`)
-            const file = blob.type === 'video/mp4' ? new File([blob],  `${formIoData.data.components[index].key}_fileUpload_${new Date().toISOString()}.mp4`, {type: 'video/mp4'}) : new File([blob],  `${formIoData.data.components[index].key}_fileUpload_${new Date().toISOString()}`)
+            const getExtension = (type: string) => {
+              interface lookUpProps {
+                [key: string]: string,
+              }
+              const lookUp: lookUpProps =  {
+                'video/mp4': '.mp4',
+                'video/webm': '.webm',
+                'video/ogg': '.ogg',
+                'image/jpeg': '.jpg',
+                'image/png': '.png',
+                'image/gif': '.gif',
+              }
+              if (lookUp[type]) {
+                return lookUp[type]
+              } else if (type.includes('video')) {
+                return '.mp4'
+              } else if (type.includes('image')) {
+                return '.jpg'
+              } else {
+                return ''
+              }
+            }
+            const file = new File([blob],  `${formIoData.data.title.replaceAll(' ', '') + '_' + formIoData.data.components[index].key.substring(0, 30)}_fileUpload_${Date.now()}${getExtension(blob.type)}`, {type: blob.type})
+            // const file = blob.type === 'video/mp4' ? new File([blob],  `${formIoData.data.components[index].key.substring(0, 30)}_fileUpload_${new Date()}.mp4`, {type: 'video/mp4'}) : new File([blob],  `${formIoData.data.components[index].key.substring(0, 30)}_fileUpload_${new Date()}`)
             // console.log('file blbo', file)
             var formData = new FormData();
             formData.append('file', file)
