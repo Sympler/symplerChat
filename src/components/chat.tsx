@@ -25,6 +25,7 @@ interface FormIoResponse {
         placeholder: string,
         description: string,
         tableView: boolean,
+        disabled?: boolean,
         type: string
         values: [{
           label: string,
@@ -75,6 +76,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
   useEffect(() => {
     // {{projectUrl}}/form/{{formId}}
     axios.get(formIoUrl).then(res => {
+      console.log('results here', res.data)
       setFormIoData(res)
     }).catch(error => {
       console.error('get error', error)
@@ -360,6 +362,10 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
               responseText = formIoData.data.components[index].label.replaceAll(`{{${v.key}}}`, v.value)
             }
           })
+        }
+        if (formIoData.data.components[index].disabled === true) {
+          toggleInputDisabled()
+          setInputDisabled(true)
         }
         if (inputDisabled) {
           toggleInputDisabled()
