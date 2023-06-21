@@ -76,7 +76,6 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
   useEffect(() => {
     // {{projectUrl}}/form/{{formId}}
     axios.get(formIoUrl).then(res => {
-      console.log('results here', res.data)
       setFormIoData(res)
     }).catch(error => {
       console.error('get error', error)
@@ -358,7 +357,6 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           console.log('matches', matches);
           formVariables.map(v => {
             if (matches?.includes(`{{${v.key}}}`)) {
-              console.log('yeppydoodle')
               responseText = formIoData.data.components[index].label.replaceAll(`{{${v.key}}}`, v.value)
             }
           })
