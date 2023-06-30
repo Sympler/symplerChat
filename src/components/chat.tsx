@@ -44,6 +44,7 @@ interface ChatProps {
   endpoint?: string
   shouldRedeem?: string | null,
   uuid?: string | null
+  uidName?: string | null
 }
 interface formVariablesProps {
   key: string,
@@ -51,7 +52,7 @@ interface formVariablesProps {
 }
 
 
-const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uuid}) => {
+const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uuid, uidName}) => {
   const [formIoData, setFormIoData] = useState<FormIoResponse>()
   const [sessionStarted, setSessionStarted] = useState(false);
   const [submit, setSubmit] = useState(false);
@@ -258,6 +259,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
   }
 
   const askQuestion = async (message?: string) => {
+    console.log(`hit ask question ${index}`)
     if (formIoData) {
       if (index >= formIoData?.data.components.length - 1) {
         const setCookie = (cname: string, exdays: number, cvalue?: string) => {
@@ -370,12 +372,24 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           setInputDisabled(false)
         }
         addResponseMessage(responseText)
+        console.log(`should send redemption link ${shouldSendRedemptionLink}`)
         if(formIoData.data.components[index].placeholder !== '' && formIoData.data.components[index].placeholder !== undefined && shouldSendRedemptionLink) {
-          let redemptionLink = formIoData.data.components[index].placeholder.replace('uid=1234', `uid=${formSubmissionId}`).replace('campaign=1234', `campaign=${formIoData.data.title}`).replace(/ /g,"-");
-          if (uuid && shouldRedeem && shouldRedeem !== '2' && shouldRedeem !== '3' && shouldRedeem === '1'){
-            redemptionLink = formIoData.data.components[index].placeholder.replace('uid=1234', `uid=${uuid}`).replace('campaign=1234', `campaign=${formIoData.data.title}`).replace(/ /g,"-");
+          console.log(`hit if statement`)
+          const name = uidName ?? 'uid';
+          let redemptionLink: string | undefined;
+          if (uuid) {
+            redemptionLink = formIoData.data.components[index].placeholder.replace(`${name}=1234`, `${name}=${uuid}`).replace('campaign=1234', `campaign=${formIoData.data.title}`).replace(/ /g,"-");
+          } else {
+            redemptionLink = formIoData.data.components[index].placeholder.replace(`${name}=1234`, `${name}=${formSubmissionId}`).replace('campaign=1234', `campaign=${formIoData.data.title}`).replace(/ /g,"-");
           }
-          if ((!shouldRedeem && !uuid) || (uuid && shouldRedeem && shouldRedeem !== '2' && shouldRedeem !== '3' && shouldRedeem === '1')){
+          // if (uuid && shouldRedeem && shouldRedeem !== '2' && shouldRedeem !== '3' && shouldRedeem === '1'){
+          //   redemptionLink = formIoData.data.components[index].placeholder.replace(`${name}=1234`, `${name}=${uuid}`).replace('campaign=1234', `campaign=${formIoData.data.title}`).replace(/ /g,"-");
+          // }
+          // console.log('redemption link', redemptionLink);
+          // console.log(`should redeem ${shouldRedeem}`);
+          // console.log(`uuid ${uuid}`);
+          // if ((!shouldRedeem && !uuid) || (uuid && shouldRedeem && shouldRedeem !== '2' && shouldRedeem !== '3' && shouldRedeem === '1')){
+          if (redemptionLink) {
             addLinkSnippet({
               title: '',
               link: redemptionLink,

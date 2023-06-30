@@ -47,6 +47,7 @@ const App: React.FC<ChatProps> = () => {
   const [formName, setFormName] = useState<string | null>(null);
   const [shouldRedeem, setShouldRedeem] = useState<string | null>(null);
   const [uuid, setUuid] = useState<string | null>(null);
+  const [uidName, setUidName] = useState<string | null>(null);
 
   useEffect(() => {
     const isBrowser = typeof window !== "undefined"
@@ -56,9 +57,14 @@ const App: React.FC<ChatProps> = () => {
       let endpoint = params.endpoint;
       let formName = params.formName;
       let shouldRedeem = params.status;
-      let uuid = params.uid;
+      let uidName = params.uidName;
+      let uuid: string | null = null;
+      if (uidName) {
+        uuid = params[uidName];
+      }
 
       setUuid(uuid)
+      setUidName(uidName);
       setShouldRedeem(shouldRedeem);
       setEndpoint(endpoint);
       setFormName(formName);
@@ -70,7 +76,7 @@ const App: React.FC<ChatProps> = () => {
     <div className="App">
       <NavBar />
       {endpoint && formName ?(
-        <SymplerChat endpoint={endpoint} formName={formName} shouldRedeem={shouldRedeem} uuid={uuid} />
+        <SymplerChat endpoint={endpoint} formName={formName} shouldRedeem={shouldRedeem} uuid={uuid} uidName={uidName} />
       ): null}
     </div>
   );
