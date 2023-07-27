@@ -60,6 +60,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
   const [inputDisabled, setInputDisabled] = useState(false);
   const [shouldSendRedemptionLink, setShouldSendRedemptionLink] = useState(true);
   const [endSurveyResponses, setEndSurveyResponses] = useState([''])
+  const [otherReponses, setOtherResponses] = useState([''])
   const [cookiePresent, setCookiePresent] = useState(false);
   const [isVpn, setIsVpn] = useState(false);
   const [formSubmissionId, setFormSubmissionId] = useState('')
@@ -412,6 +413,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           toggleInputDisabled();
           setInputDisabled(true)
           setEndSurveyResponses(formIoData.data.components[index].data.values.filter(v => v.value.includes('END_SURVEY') ? v : null).map(v => v.label))
+          setOtherResponses(formIoData.data.components[index].data.values.filter(v => v.value === 'OTHER' ? v : null).map(v => v.label))
           formIoData.data.components[index].data.values.map(v => v.value = v.label)
           setQuickButtons(formIoData.data.components[index].data.values ?? [])
         } else {
@@ -445,8 +447,16 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
 
 
   const hanleQuckButtonClick = (e: string) => {
-    addUserMessage(e);
-    askQuestion(e);
+    if (otherReponses.includes(e)) {
+      if(inputDisabled) {
+        toggleInputDisabled()
+        setInputDisabled(false)
+      }
+      setQuickButtons([])
+    } else {
+      addUserMessage(e);
+      askQuestion(e);
+    }
   };
 
   useEffect(() => {
