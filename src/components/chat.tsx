@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useMemo, useState} from 'react';
 import {Widget, addResponseMessage, setQuickButtons, addUserMessage, toggleWidget, toggleMsgLoader, addLinkSnippet, renderCustomComponent, toggleInputDisabled} from 'react-chat-widget-custom';
 import 'react-chat-widget-custom/lib/styles.css';
 import axios from 'axios';
@@ -36,6 +36,7 @@ interface FormIoResponse {
     data: any
     title: string
     _id: string
+    tags: Array<string>
   }
 }
 
@@ -66,14 +67,25 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
   const [formSubmissionId, setFormSubmissionId] = useState('')
   const [location, setLocation] = useState<any>();
   const [cookieCheck, setCookieCheck] = useState(false);
-  const END_SURVEY = `Okay, thanks so much! We don't have any other questions for you at this time, but we hope to talk to you in another study soon. Have a great day!`
+  // const [END_SURVEY, SET_END_SURVEY] = useState(`Okay, thanks so much! We don't have any other questions for you at this time, but we hope to talk to you in another study soon. Have a great day!`)
   const VPN_USER = `Please disable your vpn and refresh the page to continue with the survey.`
   // const formIoUrl = `https://${endpoint}.form.io/${formName}`
   const formIoUrl = `https://forms.sympler.co/${formName}`
   const [formVariables, setFormVariables] = useState<Array<formVariablesProps>>([])
-  
-
   const newDate = new Date().toString();
+
+  const END_SURVEY = useMemo(() => {
+    // Check form language
+    if (formIoData && formIoData.data.tags.length > 0) {
+      if (formIoData.data.tags.includes('japanese')) {
+        return `ありがとうございます！この調査へのご興味に感謝します。現時点ではもう質問はありませんが、将来のプロジェクトでまたお話できることを願っています。`
+      } else {
+        return `Okay, thanks so much! We don't have any other questions for you at this time, but we hope to talk to you in another study soon. Have a great day!`
+      }
+    } else {
+      return `Okay, thanks so much! We don't have any other questions for you at this time, but we hope to talk to you in another study soon. Have a great day!`
+    }
+  }, [formIoData])
 
   useEffect(() => {
     // {{projectUrl}}/form/{{formId}}
@@ -240,9 +252,11 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
               if (endSurveyResponses.includes(message)) {
                 setIndex(1000)
                 toggleInputDisabled()
+                setInputDisabled(true)
               } else if (message.includes('invalidUrl')) {
                 setIndex(1000)
                 toggleInputDisabled()
+                setInputDisabled(true)
               } else {
                 setIndex(index + 1)
               }
@@ -260,7 +274,6 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
   }
 
   const askQuestion = async (message?: string) => {
-    console.log(`hit ask question ${index}`)
     if (formIoData) {
       if (index >= formIoData?.data.components.length - 1) {
         const setCookie = (cname: string, exdays: number, cvalue?: string) => {
@@ -315,7 +328,10 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           if (!isVpn) {
             setIndex(1000)
           }
-          toggleInputDisabled()
+          if (!inputDisabled) {
+            toggleInputDisabled()
+            setInputDisabled(true)
+          }
           return
         } else {
           await submitData(location?.state_prov, index)
@@ -345,9 +361,10 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           setInputDisabled(false)
         }
         if (formIoData.data.components[index].data) {
-          toggleInputDisabled();
-          setInputDisabled(true)
-
+          if (!inputDisabled) {
+            toggleInputDisabled();
+            setInputDisabled(true)
+          }
           setQuickButtons(formIoData.data.components[index].data.values ?? [])
         } else {
           setQuickButtons([])
@@ -357,7 +374,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
         let responseText = formIoData.data.components[index].label
         if (formIoData.data.components[index].label.match(/{{(.*?)}}/g)) {
           let matches = formIoData.data.components[index].label.match(/{{(.*?)}}/g);
-          console.log('matches', matches);
+          // console.log('matches', matches);
           formVariables.map(v => {
             if (matches?.includes(`{{${v.key}}}`)) {
               responseText = formIoData.data.components[index].label.replaceAll(`{{${v.key}}}`, v.value)
@@ -365,17 +382,17 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           })
         }
         if (formIoData.data.components[index].disabled === true) {
-          toggleInputDisabled()
-          setInputDisabled(true)
+          if (!inputDisabled) {
+            toggleInputDisabled()
+            setInputDisabled(true)
+          }
         }
         if (inputDisabled) {
           toggleInputDisabled()
           setInputDisabled(false)
         }
         addResponseMessage(responseText)
-        console.log(`should send redemption link ${shouldSendRedemptionLink}`)
         if(formIoData.data.components[index].placeholder !== '' && formIoData.data.components[index].placeholder !== undefined && shouldSendRedemptionLink) {
-          console.log(`hit if statement`)
           const name = uidName ?? 'uid';
           let redemptionLink: string | undefined;
           if (uuid) {
@@ -405,13 +422,17 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
             addUserMessage(value)
             await submitData(value, index)
           }
-          toggleInputDisabled();
-          setInputDisabled(true)
+          if (!inputDisabled) {
+            toggleInputDisabled();
+            setInputDisabled(true)
+          }
           renderCustomComponent(SliderInput, {min: 0, max: labels.length - 1, labels: labels, confirmValue: sliderResponse}, false);
         }
         if (formIoData.data.components[index].data) {
-          toggleInputDisabled();
-          setInputDisabled(true)
+          if(!inputDisabled) {
+            toggleInputDisabled();
+            setInputDisabled(true)
+          }
           setEndSurveyResponses(formIoData.data.components[index].data.values.filter(v => v.value.includes('END_SURVEY') ? v : null).map(v => v.label))
           setOtherResponses(formIoData.data.components[index].data.values.filter(v => v.value === 'OTHER' ? v : null).map(v => v.label))
           formIoData.data.components[index].data.values.map(v => v.value = v.label)
@@ -427,7 +448,10 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
       } else {
         addResponseMessage(END_SURVEY)
         setQuickButtons([])
-        toggleInputDisabled()
+        if (!inputDisabled) {
+          toggleInputDisabled()
+          setInputDisabled(true)
+        }
       }
      
     }
