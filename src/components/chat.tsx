@@ -99,11 +99,11 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
   useEffect(() => {
     if (formName && document.cookie.includes(`SESSIONFORM${formName}=${formName}`)) {
       setCookiePresent(true)
-      setCookieCheck(true)
       setIndex(1000)
     }
+    setCookieCheck(true)
   },[formName])
-
+  
   useEffect(() => {
     const getIp = async() => {
       try {
