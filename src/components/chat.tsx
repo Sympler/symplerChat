@@ -107,9 +107,11 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
   useEffect(() => {
     const getIp = async() => {
       try {
-        const ipResponse = await axios.get('https://api.ipgeolocation.io/ipgeo?apiKey=902c52a386fb4db59dd7d4c98e2dba2a');
+        // const ipResponse = await axios.get('https://api.ipgeolocation.io/ipgeo?apiKey=902c52a386fb4db59dd7d4c98e2dba2a');
+        const ipResponse = await axios.get(`https://ipinfo.io?token=36639d7493f191`)
         setLocation(ipResponse.data)
         const ip = ipResponse.data.ip
+        console.log(ipResponse.data)
         const vpnCheck = await axios.get(`https://dash-api.sympler.co/api/v1/vpncheck/${ip}`);
         if (vpnCheck.data.response.block === 1) {
           setIsVpn(true)
@@ -298,19 +300,23 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
         return
       } else if (formIoData.data.components[index].label.includes('GetLocation')) {
         setSubmit(true)
+        console.log(location)
         try {
           if (!location) {
-            let l = await axios.get('https://api.ipgeolocation.io/ipgeo?apiKey=902c52a386fb4db59dd7d4c98e2dba2a')
+            // let l = await axios.get('https://api.ipgeolocation.io/ipgeo?apiKey=902c52a386fb4db59dd7d4c98e2dba2a')
+            const l = await axios.get(`https://ipinfo.io?token=36639d7493f191`)
             setLocation(l.data)
             if (l) {
-              await submitData(l.data?.country_name, index)
+              // await submitData(l.data?.country_name, index)
+              await submitData(l.data?.country, index)
               return
             } else {
               await submitData('Error getting location information', index)
               return
             }
           } else {
-            await submitData(location?.country_name, index)
+            // await submitData(location?.country_name, index)
+            await submitData(location?.country, index)
             return
           }
         } catch (error) {
@@ -321,10 +327,12 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
       
       } else if (formIoData.data.components[index].label.includes('StateProvince')){
         if (!location) {
-          let l = await axios.get('https://api.ipgeolocation.io/ipgeo?apiKey=902c52a386fb4db59dd7d4c98e2dba2a')
+          // let l = await axios.get('https://api.ipgeolocation.io/ipgeo?apiKey=902c52a386fb4db59dd7d4c98e2dba2a')
+          const l = await axios.get(`https://ipinfo.io?token=36639d7493f191`)
           setLocation(l.data)
         }
-        if (!formIoData.data.components[index].data.values.map(v => v.label.toLowerCase()).includes(location?.state_prov.toLowerCase()) ) {
+        // if (!formIoData.data.components[index].data.values.map(v => v.label.toLowerCase()).includes(location?.state_prov.toLowerCase()) ) {
+        if (!formIoData.data.components[index].data.values.map(v => v.label.toLowerCase()).includes(location?.region.toLowerCase()) ) {
           if (!isVpn) {
             setIndex(1000)
           }
@@ -334,7 +342,8 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           }
           return
         } else {
-          await submitData(location?.state_prov, index)
+          // await submitData(location?.state_prov, index)
+          await submitData(location?.region, index)
           return
         }
       } else if (formIoData.data.components[index].label.includes('RedemptionFlow')) {
