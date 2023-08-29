@@ -1,0 +1,12 @@
+
+    #slider-button {
+        background: none;
+        border-radius: 15px;
+        border: 2px solid #a2c0fc;
+        font-weight: 700;
+        padding: 5px 10px;
+        cursor: pointer;
+        outline: 0;
+        border-color: #635ec0!important;
+        text-align: left;
+    }

@@ -3,6 +3,7 @@ import {Widget, addResponseMessage, setQuickButtons, addUserMessage, toggleWidge
 import 'react-chat-widget-custom/lib/styles.css';
 import axios from 'axios';
 import SliderInput from './slider/slider';
+import SelectBoxes from './selectBoxes/selectBoxes';
 
 export type TFile = {
   source?: string;
@@ -46,6 +47,7 @@ interface ChatProps {
   shouldRedeem?: string | null,
   uuid?: string | null
   uidName?: string | null
+  urlParams?: string | null
 }
 interface formVariablesProps {
   key: string,
@@ -53,7 +55,7 @@ interface formVariablesProps {
 }
 
 
-const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uuid, uidName}) => {
+const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uuid, uidName, urlParams}) => {
   const [formIoData, setFormIoData] = useState<FormIoResponse>()
   const [sessionStarted, setSessionStarted] = useState(false);
   const [submit, setSubmit] = useState(false);
@@ -73,6 +75,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
   const formIoUrl = `https://forms.sympler.co/${formName}`
   const [formVariables, setFormVariables] = useState<Array<formVariablesProps>>([])
   const newDate = new Date().toString();
+  const [continueToForm, setContinueToForm] = useState(false)
 
   const END_SURVEY = useMemo(() => {
     // Check form language
@@ -87,14 +90,105 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
     }
   }, [formIoData])
 
+  // useEffect(() => {
+  //   // {{projectUrl}}/form/{{formId}}
+  //   // axios.get(formIoUrl).then(res => {
+  //   //   // console.log('res', res)
+  //   //   setFormIoData(res)
+  //   // }).catch(error => {
+  //   //   console.error('get error', error)
+  //   // })
+  // }, [continueToForm])
+
   useEffect(() => {
-    // {{projectUrl}}/form/{{formId}}
+    if(!formIoData && !continueToForm)
     axios.get(formIoUrl).then(res => {
-      setFormIoData(res)
+      const fioData: FormIoResponse = res
+      // if(!urlParams || urlParams === null || !fioData || !continueToForm || !formSubmissionId) {
+      //   return;
+      // }
+      let params = JSON.parse(urlParams ? urlParams : '')
+      if(Object.keys(params).length > 2) {
+        let components: Object[] = []
+        for (let i=0; i<Object.keys(params).length; i++) {
+          let key = Object.keys(params)[i];
+          if (!fioData.data.components.find(c => c.key === key) && key !== "formName" && key !== "endpoint") {
+            let component = {
+              "input": true,
+              "tableView": true,
+              "inputType": "text",
+              "inputMask": "",
+              "label": key,
+              "key": key,
+              "placeholder": "",
+              "prefix": "",
+              "suffix": "",
+              "multiple": false,
+              "defaultValue": "",
+              "protected": false,
+              "unique": false,
+              "persistent": true,
+              "validate": {
+                  "required": false,
+                  "minLength": "",
+                  "maxLength": "",
+                  "pattern": "",
+                  "custom": "",
+                  "customPrivate": false
+              },
+              "conditional": {
+                  "show": "",
+                  "when": null,
+                  "eq": ""
+              },
+              "type": "textfield",
+              "tags": [],
+              "lockKey": true,
+              "isNew": false
+            }
+            components.push(component)
+          }
+        }
+        const createField = async() => {
+          try {
+            let login = await axios.get("https://dash-api.sympler.co/api/v1/formiotoken")
+            let token = login.data.data['x-jwt-token'];
+            
+            await axios.put(`https://forms.sympler.co/form/${fioData.data._id}`,
+              {
+                  "components": [...components, ...fioData.data.components]
+              },
+              {
+                headers: {
+                  'x-jwt-token': token
+                }
+              },
+            );
+            setContinueToForm(true)
+            try {
+              let res = await axios.get(formIoUrl)
+              setFormIoData(res)
+            } catch (error) {
+              console.error('get error', error)
+            }
+          } catch (error) {
+            console.error(error)
+          }
+        }
+        if (components.length > 0) {
+          createField()
+        } else {
+          setFormIoData(fioData)
+          setContinueToForm(true)
+        }
+      } else {
+        setFormIoData(fioData)
+        setContinueToForm(true)
+      }
     }).catch(error => {
       console.error('get error', error)
     })
-  }, [])
+  }, [urlParams, formIoData, continueToForm, formSubmissionId])
 
   useEffect(() => {
     if (formName && document.cookie.includes(`SESSIONFORM${formName}=${formName}`)) {
@@ -111,12 +205,15 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
         const ipResponse = await axios.get(`https://ipinfo.io?token=36639d7493f191`)
         setLocation(ipResponse.data)
         const ip = ipResponse.data.ip
-        console.log(ipResponse.data)
         const vpnCheck = await axios.get(`https://dash-api.sympler.co/api/v1/vpncheck/${ip}`);
         if (vpnCheck.data.response.block === 1) {
           setIsVpn(true)
           if (!cookiePresent) {
             setIndex(1001)
+            toggleMsgLoader()
+            setTimeout(() => {
+              toggleMsgLoader()
+            }, 3000)
             addResponseMessage(VPN_USER)
           }
         }
@@ -131,6 +228,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
 
   const submitData = async (message: string, index: number) => {
     if (formIoData) {
+      toggleMsgLoader()
       if (formIoData.data.components[index].description) {
         let varName = formIoData.data.components[index].description
         var startIndex = varName.indexOf("{{") + 2;
@@ -158,7 +256,6 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
               ...obj
             }
           }).then(result => {
-            // console.log('post create submission result', result)
             setFormSubmissionId(result.data._id)
             setSessionStarted(true)
             setIndex(index + 1)
@@ -170,7 +267,6 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
       } else if (formIoData.data._id && sessionStarted) {
         // Get the previous submissions
         axios.get(`${formIoUrl}/submission/${formSubmissionId}`).then(async res => {
-          // console.log('get previous submission', res)
           const previousData = res.data.data
           const key = formIoData.data.components[index].key
           const obj: any = {};
@@ -183,10 +279,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           if (message.includes('data:')) {
             const base64Source = message.slice(message.indexOf('(') + 1, message.lastIndexOf(')'))
             const base64Response = await fetch(base64Source)
-            // console.log("base64response", base64Response)
             const blob = await base64Response.blob();
-            // console.log('base64 blob', blob)
-            // const file = new File([blob],  `${formIoData.data.components[index].key}_fileUpload_${new Date().toISOString()}`)
             const getExtension = (type: string) => {
               interface lookUpProps {
                 [key: string]: string,
@@ -218,7 +311,6 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
             await axios.post(`https://dash-api.sympler.co/api/v1/uploadimage`,
               formData,
             ).then(result => {
-              // console.log('sympler result', result)
               toggleMsgLoader();
               const imageMessage = result.data.file
               obj[key] = imageMessage
@@ -293,6 +385,15 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
             event_label: formIoData.data.title
           });
         }
+      } else if (urlParams && Object.keys(urlParams).length > 2){
+        let keys = Object.keys(JSON.parse(urlParams ? urlParams : ''));
+        if (keys.includes(formIoData.data.components[index].label)) {
+          let key = keys.indexOf(formIoData.data.components[index].label)
+          let value = Object.values(JSON.parse(urlParams ? urlParams : ''))[key] as string
+          setSubmit(true)
+          await submitData(value, index)
+          return
+        }
       } else if (formIoData.data.components[index].label.includes('GetTimeZone')) {
         setSubmit(true)
         let timezone = newDate.slice(newDate.indexOf('('), newDate.lastIndexOf(')') + 1)
@@ -300,7 +401,6 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
         return
       } else if (formIoData.data.components[index].label.includes('GetLocation')) {
         setSubmit(true)
-        console.log(location)
         try {
           if (!location) {
             // let l = await axios.get('https://api.ipgeolocation.io/ipgeo?apiKey=902c52a386fb4db59dd7d4c98e2dba2a')
@@ -400,7 +500,17 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           toggleInputDisabled()
           setInputDisabled(false)
         }
-        addResponseMessage(responseText)
+        
+        let typingTime = 1000 + responseText.length;
+        if (responseText.length > 150) {
+          typingTime = 1500 + responseText.length;
+        } else if (responseText.length > 500) {
+          typingTime = 3000 + responseText.length;
+        }
+        setTimeout(() => {
+          addResponseMessage(responseText)
+          toggleMsgLoader()
+        }, typingTime)
         if(formIoData.data.components[index].placeholder !== '' && formIoData.data.components[index].placeholder !== undefined && shouldSendRedemptionLink) {
           const name = uidName ?? 'uid';
           let redemptionLink: string | undefined;
@@ -416,14 +526,31 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           // console.log(`should redeem ${shouldRedeem}`);
           // console.log(`uuid ${uuid}`);
           // if ((!shouldRedeem && !uuid) || (uuid && shouldRedeem && shouldRedeem !== '2' && shouldRedeem !== '3' && shouldRedeem === '1')){
-          if (redemptionLink) {
-            addLinkSnippet({
-              title: '',
-              link: redemptionLink,
-              target: '_blank'
-            })
-          }
+          setTimeout(() => {
+            if (redemptionLink) {
+              addLinkSnippet({
+                title: '',
+                link: redemptionLink,
+                target: '_blank'
+              })
+            }
+          }, typingTime)
+    
 
+        }
+        if (formIoData.data.components[index].type === "selectboxes") {
+          let labels = formIoData.data.components[index].values
+          const sliderResponse = async (value: string) => {
+            addUserMessage(value)
+            await submitData(value, index)
+          }
+          if (!inputDisabled) {
+            toggleInputDisabled();
+            setInputDisabled(true)
+          }
+          setTimeout(() => {
+            renderCustomComponent(SelectBoxes, {labels: labels, confirmValue: sliderResponse}, false);
+          }, typingTime + 10)
         }
         if(formIoData.data.components[index].type === 'radio') {
           let labels = formIoData.data.components[index].values
@@ -435,7 +562,9 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
             toggleInputDisabled();
             setInputDisabled(true)
           }
-          renderCustomComponent(SliderInput, {min: 0, max: labels.length - 1, labels: labels, confirmValue: sliderResponse}, false);
+          setTimeout(() => {
+            renderCustomComponent(SliderInput, {min: 0, max: labels.length - 1, labels: labels, confirmValue: sliderResponse}, false);
+          }, typingTime + 10)
         }
         if (formIoData.data.components[index].data) {
           if(!inputDisabled) {
@@ -445,17 +574,24 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           setEndSurveyResponses(formIoData.data.components[index].data.values.filter(v => v.value.includes('END_SURVEY') ? v : null).map(v => v.label))
           setOtherResponses(formIoData.data.components[index].data.values.filter(v => v.value === 'OTHER' ? v : null).map(v => v.label))
           formIoData.data.components[index].data.values.map(v => v.value = v.label)
-          setQuickButtons(formIoData.data.components[index].data.values ?? [])
+          
+          setTimeout(() => {
+            setQuickButtons(formIoData.data.components[index].data.values ?? [])
+          }, typingTime + 10)
         } else {
           setQuickButtons([])
+          setTimeout(() => {
+          }, typingTime)
         }
         if (message) {
-          // console.log('askquesion is being run not insided')
-          // console.log('new message', message)
           await submitData(message, index)
         }
       } else {
-        addResponseMessage(END_SURVEY)
+        toggleMsgLoader()
+        setTimeout(() => {
+          toggleMsgLoader()
+          addResponseMessage(END_SURVEY)
+        }, 1500)
         setQuickButtons([])
         if (!inputDisabled) {
           toggleInputDisabled()
@@ -470,13 +606,6 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
     askQuestion()
   }, [index, formIoData])
 
-  useEffect(() => {
-    
-  })
-  // useEffect(() => {
-  //   console.log('image being passed to', image)
-  //   if (image.length >= 1) {
-  //   }, [image])
 
 
   const hanleQuckButtonClick = (e: string) => {
