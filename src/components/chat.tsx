@@ -82,6 +82,8 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
     if (formIoData && formIoData.data.tags.length > 0) {
       if (formIoData.data.tags.includes('japanese')) {
         return `ありがとうございます！この調査へのご興味に感謝します。現時点ではもう質問はありませんが、将来のプロジェクトでまたお話できることを願っています。`
+      } else if (formIoData.data.tags.includes('french')) {
+        return `D'accord, merci beaucoup ! Nous n'avons pas d'autres questions à vous poser pour le moment, mais nous espérons pouvoir bientôt vous en parler dans le cadre d'une autre étude. Passe une bonne journée!`
       } else {
         return `Okay, thanks so much! We don't have any other questions for you at this time, but we hope to talk to you in another study soon. Have a great day!`
       }
@@ -229,6 +231,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
   const submitData = async (message: string, index: number) => {
     if (formIoData) {
       toggleMsgLoader()
+      console.log('toggle should be on')
       if (formIoData.data.components[index].description) {
         let varName = formIoData.data.components[index].description
         var startIndex = varName.indexOf("{{") + 2;
@@ -369,6 +372,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
 
   const askQuestion = async (message?: string) => {
     if (formIoData) {
+      console.log('label', formIoData.data.components[index].label)
       if (index >= formIoData?.data.components.length - 1) {
         const setCookie = (cname: string, exdays: number, cvalue?: string) => {
           const d = new Date();
@@ -385,7 +389,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
             event_label: formIoData.data.title
           });
         }
-      } else if (urlParams && Object.keys(urlParams).length > 2){
+      } else if (urlParams && Object.keys(JSON.parse(urlParams)).length > 2){
         let keys = Object.keys(JSON.parse(urlParams ? urlParams : ''));
         if (keys.includes(formIoData.data.components[index].label)) {
           let key = keys.indexOf(formIoData.data.components[index].label)
@@ -461,6 +465,8 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           await submitData('Error', index)
           return
         }
+      } else {
+        toggleMsgLoader()
       }
       if (message && submit === false) {
         await submitData(message, index)
@@ -510,6 +516,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
         setTimeout(() => {
           addResponseMessage(responseText)
           toggleMsgLoader()
+          console.log('toggle should be off')
         }, typingTime)
         if(formIoData.data.components[index].placeholder !== '' && formIoData.data.components[index].placeholder !== undefined && shouldSendRedemptionLink) {
           const name = uidName ?? 'uid';
