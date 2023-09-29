@@ -230,8 +230,9 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
 
   const submitData = async (message: string, index: number) => {
     if (formIoData) {
-      toggleMsgLoader()
-      console.log('toggle should be on')
+      // if (index < formIoData?.data.components.length - 1) {
+      //   toggleMsgLoader()
+      // }
       if (formIoData.data.components[index].description) {
         let varName = formIoData.data.components[index].description
         var startIndex = varName.indexOf("{{") + 2;
@@ -372,8 +373,11 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
 
   const askQuestion = async (message?: string) => {
     if (formIoData) {
-      console.log('label', formIoData.data.components[index].label)
       if (index >= formIoData?.data.components.length - 1) {
+        if (!inputDisabled) {
+          toggleInputDisabled();
+          setInputDisabled(true)
+        }
         const setCookie = (cname: string, exdays: number, cvalue?: string) => {
           const d = new Date();
           d.setTime(d.getTime() + (exdays*24*60*60*1000));
@@ -465,8 +469,6 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           await submitData('Error', index)
           return
         }
-      } else {
-        toggleMsgLoader()
       }
       if (message && submit === false) {
         await submitData(message, index)
@@ -485,11 +487,11 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           setQuickButtons([])
         }
       } else if (index !== 1000) {
-        // console.log('index before it adds reponse', index)
+
         let responseText = formIoData.data.components[index].label
         if (formIoData.data.components[index].label.match(/{{(.*?)}}/g)) {
           let matches = formIoData.data.components[index].label.match(/{{(.*?)}}/g);
-          // console.log('matches', matches);
+
           formVariables.map(v => {
             if (matches?.includes(`{{${v.key}}}`)) {
               responseText = formIoData.data.components[index].label.replaceAll(`{{${v.key}}}`, v.value)
@@ -502,10 +504,6 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
             setInputDisabled(true)
           }
         }
-        if (inputDisabled) {
-          toggleInputDisabled()
-          setInputDisabled(false)
-        }
         
         let typingTime = 1000 + responseText.length;
         if (responseText.length > 150) {
@@ -513,10 +511,10 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
         } else if (responseText.length > 500) {
           typingTime = 3000 + responseText.length;
         }
+        toggleMsgLoader()
         setTimeout(() => {
           addResponseMessage(responseText)
           toggleMsgLoader()
-          console.log('toggle should be off')
         }, typingTime)
         if(formIoData.data.components[index].placeholder !== '' && formIoData.data.components[index].placeholder !== undefined && shouldSendRedemptionLink) {
           const name = uidName ?? 'uid';
@@ -571,7 +569,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           }
           setTimeout(() => {
             renderCustomComponent(SliderInput, {min: 0, max: labels.length - 1, labels: labels, confirmValue: sliderResponse}, false);
-          }, typingTime + 10)
+          }, typingTime - 10)
         }
         if (formIoData.data.components[index].data) {
           if(!inputDisabled) {
@@ -584,7 +582,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           
           setTimeout(() => {
             setQuickButtons(formIoData.data.components[index].data.values ?? [])
-          }, typingTime + 10)
+          }, typingTime - 10)
         } else {
           setQuickButtons([])
           setTimeout(() => {
@@ -600,10 +598,10 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           addResponseMessage(END_SURVEY)
         }, 1500)
         setQuickButtons([])
-        if (!inputDisabled) {
-          toggleInputDisabled()
-          setInputDisabled(true)
-        }
+        // if (!inputDisabled) {
+        //   toggleInputDisabled()
+        //   setInputDisabled(true)
+        // }
       }
      
     }
