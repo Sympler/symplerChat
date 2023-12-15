@@ -23,6 +23,7 @@ interface FormIoResponse {
         input: boolean,
         key: string,
         label: string,
+		defaultValue: string,
         placeholder: string,
         description: string,
         tableView: boolean,
@@ -76,6 +77,8 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
   const [formVariables, setFormVariables] = useState<Array<formVariablesProps>>([])
   const newDate = new Date().toString();
   const [continueToForm, setContinueToForm] = useState(false)
+  const [rejectionLink, setRejectionLink] = useState<string>()
+
 
   const END_SURVEY = useMemo(() => {
     // Check form language
@@ -91,6 +94,8 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
       return `Okay, thanks so much! We don't have any other questions for you at this time, but we hope to talk to you in another study soon. Have a great day!`
     }
   }, [formIoData])
+
+
 
   // useEffect(() => {
   //   // {{projectUrl}}/form/{{formId}}
@@ -407,6 +412,12 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
         let timezone = newDate.slice(newDate.indexOf('('), newDate.lastIndexOf(')') + 1)
         await submitData(timezone.replace('(', '').replace(')', ''), index)
         return
+      } else if (formIoData.data.components[index].label.includes('RejectionLink')) {
+        setSubmit(true)
+        let link = formIoData.data.components[index].defaultValue?.replace('id=1234', `id=${formSubmissionId}` )
+        await submitData(formIoData.data.components[index].defaultValue, index)
+        setRejectionLink(link)
+        return
       } else if (formIoData.data.components[index].label.includes('GetLocation')) {
         setSubmit(true)
         try {
@@ -595,7 +606,15 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
         toggleMsgLoader()
         setTimeout(() => {
           toggleMsgLoader()
-          addResponseMessage(END_SURVEY)
+		      if (!rejectionLink){
+                addResponseMessage(END_SURVEY)
+          } else {
+            addLinkSnippet({
+              title: 'Thanks so much for taking the study, click here to finish',
+              link: rejectionLink,
+              target: '_blank'
+            })
+          }
         }, 1500)
         setQuickButtons([])
         // if (!inputDisabled) {
@@ -627,7 +646,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
   };
 
   useEffect(() => {
-    toggleWidget();
+   toggleWidget();
   }, []);
 
   return (
