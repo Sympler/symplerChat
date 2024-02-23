@@ -87,6 +87,8 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
         return `ありがとうございます！この調査へのご興味に感謝します。現時点ではもう質問はありませんが、将来のプロジェクトでまたお話できることを願っています。`
       } else if (formIoData.data.tags.includes('french')) {
         return `D'accord, merci beaucoup ! Nous n'avons pas d'autres questions à vous poser pour le moment, mais nous espérons pouvoir bientôt vous en parler dans le cadre d'une autre étude. Passe une bonne journée!`
+      } else if (formIoData.data.tags.includes('arabic')) {
+        return `شكرًا جزيلاً على اهتمامك بإجراء هذا الاستطلاع! ليس لدينا أية أسئلة أخرى لكِ في هذا الوقت، ولكننا نأمل أن نتحدث إليكِ مرة أخرى في مشروع مستقبلي:`
       } else {
         return `Okay, thanks so much! We don't have any other questions for you at this time, but we hope to talk to you in another study soon. Have a great day!`
       }
@@ -95,17 +97,6 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
     }
   }, [formIoData])
 
-
-
-  // useEffect(() => {
-  //   // {{projectUrl}}/form/{{formId}}
-  //   // axios.get(formIoUrl).then(res => {
-  //   //   // console.log('res', res)
-  //   //   setFormIoData(res)
-  //   // }).catch(error => {
-  //   //   console.error('get error', error)
-  //   // })
-  // }, [continueToForm])
 
   useEffect(() => {
     if(!formIoData && !continueToForm)
@@ -255,8 +246,8 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
         }
       }
       if (formIoData.data._id && sessionStarted === false) {
-        axios.get(`${formIoUrl}/submission/${formIoData.data._id}`).then(res => {
-        }).catch(async error => {
+        // axios.get(`${formIoUrl}/submission/${formIoData.data._id}`).then(res => {
+        // }).catch(async error => {
           const key = formIoData.data.components[index].key
           const obj: any = {};
           obj[key] = message          
@@ -272,7 +263,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           }).catch(error => {
             console.error('error', error)
           })
-        })
+        // })
       } else if (formIoData.data._id && sessionStarted) {
         // Get the previous submissions
         axios.get(`${formIoUrl}/submission/${formSubmissionId}`).then(async res => {
@@ -398,25 +389,28 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
             event_label: formIoData.data.title
           });
         }
-      } else if (urlParams && Object.keys(JSON.parse(urlParams)).length > 2){
-        let keys = Object.keys(JSON.parse(urlParams ? urlParams : ''));
-        if (keys.includes(formIoData.data.components[index].label)) {
-          let key = keys.indexOf(formIoData.data.components[index].label)
-          let value = Object.values(JSON.parse(urlParams ? urlParams : ''))[key] as string
-          setSubmit(true)
-          await submitData(value, index)
-          return
-        }
       } else if (formIoData.data.components[index].label.includes('GetTimeZone')) {
+        
         setSubmit(true)
         let timezone = newDate.slice(newDate.indexOf('('), newDate.lastIndexOf(')') + 1)
         await submitData(timezone.replace('(', '').replace(')', ''), index)
         return
       } else if (formIoData.data.components[index].label.includes('RejectionLink')) {
         setSubmit(true)
-        let link = formIoData.data.components[index].defaultValue?.replace('id=1234', `id=${formSubmissionId}` )
-        await submitData(formIoData.data.components[index].defaultValue, index)
+        let link = ""
+        if (urlParams && Object.keys(JSON.parse(urlParams)).length > 2) {
+          // For swagbucks code
+          let keys = Object.keys(JSON.parse(urlParams ? urlParams : ''));
+          if (formIoData.data.components[index].defaultValue) {
+            let key = keys.indexOf('transaction_id')
+            let value = Object.values(JSON.parse(urlParams ? urlParams : ''))[key] as string
+            link = formIoData.data.components[index].defaultValue?.replace('id=1234', `id=${value}` )
+          }
+        } else {
+          link = formIoData.data.components[index].defaultValue?.replace('id=1234', `id=${formSubmissionId}` )
+        }
         setRejectionLink(link)
+        await submitData(formIoData.data.components[index].defaultValue, index)
         return
       } else if (formIoData.data.components[index].label.includes('GetLocation')) {
         setSubmit(true)
@@ -480,6 +474,15 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           await submitData('Error', index)
           return
         }
+      } else if (urlParams && Object.keys(JSON.parse(urlParams)).length > 2){
+        let keys = Object.keys(JSON.parse(urlParams ? urlParams : ''));
+        if (keys.includes(formIoData.data.components[index].label)) {
+          setSubmit(true)
+          let key = keys.indexOf(formIoData.data.components[index].label)
+          let value = Object.values(JSON.parse(urlParams ? urlParams : ''))[key] as string
+          await submitData(value, index)
+          return
+        }
       }
       if (message && submit === false) {
         await submitData(message, index)
@@ -532,9 +535,21 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           let redemptionLink: string | undefined;
           if (uuid) {
             redemptionLink = formIoData.data.components[index].placeholder.replace(`${name}=1234`, `${name}=${uuid}`).replace('campaign=1234', `campaign=${formIoData.data.title}`).replace(/ /g,"-");
+          } else if (formIoData.data.components[index].placeholder.includes('transaction_id')) {
+            //////////////// For swagbucks code
+            console.log('testing')
+            if (urlParams && Object.keys(JSON.parse(urlParams)).length > 2) {
+              let keys = Object.keys(JSON.parse(urlParams ? urlParams : ''));
+              let key = keys.indexOf('transaction_id')
+              let value = Object.values(JSON.parse(urlParams ? urlParams : ''))[key] as string
+              redemptionLink = formIoData.data.components[index].placeholder.replace(`id=1234`, `id=${value}`);
+            } else {
+              redemptionLink = formIoData.data.components[index].placeholder.replace(`id=1234`, `id=${formSubmissionId}`);
+            }
           } else {
             redemptionLink = formIoData.data.components[index].placeholder.replace(`${name}=1234`, `${name}=${formSubmissionId}`).replace('campaign=1234', `campaign=${formIoData.data.title}`).replace(/ /g,"-");
           }
+          console.log(redemptionLink)
           // if (uuid && shouldRedeem && shouldRedeem !== '2' && shouldRedeem !== '3' && shouldRedeem === '1'){
           //   redemptionLink = formIoData.data.components[index].placeholder.replace(`${name}=1234`, `${name}=${uuid}`).replace('campaign=1234', `campaign=${formIoData.data.title}`).replace(/ /g,"-");
           // }
@@ -546,6 +561,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
             if (redemptionLink) {
               addLinkSnippet({
                 title: '',
+		linkMask: "Click Here!",
                 link: redemptionLink,
                 target: '_blank'
               })
@@ -590,7 +606,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           setEndSurveyResponses(formIoData.data.components[index].data.values.filter(v => v.value.includes('END_SURVEY') ? v : null).map(v => v.label))
           setOtherResponses(formIoData.data.components[index].data.values.filter(v => v.value === 'OTHER' ? v : null).map(v => v.label))
           formIoData.data.components[index].data.values.map(v => v.value = v.label)
-          
+          console.log('here they are', formIoData.data.components[index].data ?? [])
           setTimeout(() => {
             setQuickButtons(formIoData.data.components[index].data.values ?? [])
           }, typingTime - 10)
@@ -610,7 +626,8 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
                 addResponseMessage(END_SURVEY)
           } else {
             addLinkSnippet({
-              title: 'Thanks so much for taking the study, click here to finish',
+              title: END_SURVEY,
+	            linkMask: "Click Here!",
               link: rejectionLink,
               target: '_blank'
             })
