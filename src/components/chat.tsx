@@ -89,6 +89,12 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
         return `D'accord, merci beaucoup ! Nous n'avons pas d'autres questions à vous poser pour le moment, mais nous espérons pouvoir bientôt vous en parler dans le cadre d'une autre étude. Passe une bonne journée!`
       } else if (formIoData.data.tags.includes('arabic')) {
         return `شكرًا جزيلاً على اهتمامك بإجراء هذا الاستطلاع! ليس لدينا أية أسئلة أخرى لكِ في هذا الوقت، ولكننا نأمل أن نتحدث إليكِ مرة أخرى في مشروع مستقبلي:`
+      } else if (formIoData.data.tags.includes('spanish')) {
+        return `¡Muchas gracias por su interés en participar en esta encuesta! En este momento no tenemos más preguntas, pero esperamos volver a hablar con usted en un proyecto futuro! `
+      } else if (formIoData.data.tags.includes('korean')) { 
+        return `본 설문조사에 참여해 주셔서 대단히 감사합니다! 현재로서는 더 이상 질문이 없지만 향후 다른 프로젝트에서 다시 이야기할 수 있기를 바랍니다 : `
+      } else if (formIoData.data.tags.includes('german')) {
+        return `Vielen Dank für Ihr Interesse an dieser Umfrage! Wir haben zu diesem Zeitpunkt keine weiteren Fragen an Sie, aber wir hoffen, bei einem zukünftigen Projekt wieder mit Ihnen sprechen zu können : ` 
       } else {
         return `Okay, thanks so much! We don't have any other questions for you at this time, but we hope to talk to you in another study soon. Have a great day!`
       }
