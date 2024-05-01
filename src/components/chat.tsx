@@ -23,7 +23,8 @@ interface FormIoResponse {
         input: boolean,
         key: string,
         label: string,
-		defaultValue: string,
+        tooltip: string,
+		    defaultValue: string,
         placeholder: string,
         description: string,
         tableView: boolean,
@@ -509,6 +510,9 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
       } else if (index !== 1000) {
 
         let responseText = formIoData.data.components[index].label
+        if (formIoData.data.components[index].tooltip !== "") {
+          responseText = formIoData.data.components[index].tooltip
+        }
         if (formIoData.data.components[index].label.match(/{{(.*?)}}/g)) {
           let matches = formIoData.data.components[index].label.match(/{{(.*?)}}/g);
 
