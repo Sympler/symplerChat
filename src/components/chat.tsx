@@ -66,11 +66,14 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
   const [shouldSendRedemptionLink, setShouldSendRedemptionLink] = useState(true);
   const [endSurveyResponses, setEndSurveyResponses] = useState([''])
   const [otherReponses, setOtherResponses] = useState([''])
+  const [surveyBlock, setSurveyBlock] = useState(false)
+  const [surveyBlockResponses, setSurveyBlockResponses] = useState<string[]>([])
   const [cookiePresent, setCookiePresent] = useState(false);
   const [isVpn, setIsVpn] = useState(false);
   const [formSubmissionId, setFormSubmissionId] = useState('')
   const [location, setLocation] = useState<any>();
   const [cookieCheck, setCookieCheck] = useState(false);
+  const [screenerBlockEnd, setScreenerBlockEnd] = useState(false)
   // const [END_SURVEY, SET_END_SURVEY] = useState(`Okay, thanks so much! We don't have any other questions for you at this time, but we hope to talk to you in another study soon. Have a great day!`)
   const VPN_USER = `Please disable your vpn and refresh the page to continue with the survey.`
   // const formIoUrl = `https://${endpoint}.form.io/${formName}`
@@ -117,40 +120,25 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
         let components: Object[] = []
         for (let i=0; i<Object.keys(params).length; i++) {
           let key = Object.keys(params)[i];
-          if (!fioData.data.components.find(c => c.key === key) && key !== "formName" && key !== "endpoint") {
+          if (!fioData.data.components.find(c => c.key === key || c.key === key + 'url_param') && key !== "formName" && key !== "endpoint") {
             let component = {
               "input": true,
               "tableView": true,
-              "inputType": "text",
-              "inputMask": "",
               "label": key,
-              "key": key,
-              "placeholder": "",
-              "prefix": "",
-              "suffix": "",
-              "multiple": false,
-              "defaultValue": "",
+              "key": key + 'url_param',
               "protected": false,
               "unique": false,
               "persistent": true,
-              "validate": {
-                  "required": false,
-                  "minLength": "",
-                  "maxLength": "",
-                  "pattern": "",
-                  "custom": "",
-                  "customPrivate": false
-              },
-              "conditional": {
-                  "show": "",
-                  "when": null,
-                  "eq": ""
-              },
-              "type": "textfield",
+              "type": "hidden",
               "tags": [],
-              "lockKey": true,
-              "isNew": false
-            }
+              "conditional": {
+                 "show": "",
+                 "when": null,
+                 "eq": ""
+            },
+              "properties": {},
+              "defaultValue": ""
+            };
             components.push(component)
           }
         }
@@ -236,6 +224,15 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
       // if (index < formIoData?.data.components.length - 1) {
       //   toggleMsgLoader()
       // }
+      //there it is
+      console.log('screener block end', screenerBlockEnd, surveyBlock)
+      let surveyResponses: string[] = []
+      if (surveyBlock || screenerBlockEnd) {
+        setSurveyBlockResponses([...surveyBlockResponses, message.replaceAll(" ", "")])
+        surveyResponses = [...surveyBlockResponses, message.replaceAll(" ", "")]
+        setScreenerBlockEnd(false)
+      }
+
       if (formIoData.data.components[index].description) {
         let varName = formIoData.data.components[index].description
         var startIndex = varName.indexOf("{{") + 2;
@@ -358,6 +355,8 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
                 setIndex(1000)
                 toggleInputDisabled()
                 setInputDisabled(true)
+              } else if (surveyResponses.length > 0 && !surveyResponses.every(r => r === surveyResponses[0])) {
+                setIndex(1000)
               } else {
                 setIndex(index + 1)
               }
@@ -397,7 +396,6 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           });
         }
       } else if (formIoData.data.components[index].label.includes('GetTimeZone')) {
-        
         setSubmit(true)
         let timezone = newDate.slice(newDate.indexOf('('), newDate.lastIndexOf(')') + 1)
         await submitData(timezone.replace('(', '').replace(')', ''), index)
@@ -482,14 +480,24 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           return
         }
       } else if (urlParams && Object.keys(JSON.parse(urlParams)).length > 2){
+        // Save url parameter values
         let keys = Object.keys(JSON.parse(urlParams ? urlParams : ''));
         if (keys.includes(formIoData.data.components[index].label)) {
           setSubmit(true)
           let key = keys.indexOf(formIoData.data.components[index].label)
           let value = Object.values(JSON.parse(urlParams ? urlParams : ''))[key] as string
-          await submitData(value, index)
+          await submitData(value.slice(0, 10000), index)
+          return
+        } else if (formIoData.data.components[index].type === 'hidden') {
+          setSubmit(true)
+          await submitData(`Missing url parameter: ${formIoData.data.components[index].label}`, index)
           return
         }
+      } else if (formIoData.data.components[index].type === 'hidden') {
+        // Do not show hidden form fields - should only occur if a url parameter is missing fromt the url
+        setSubmit(true)
+        await submitData(`Missing url parameter: ${formIoData.data.components[index].label}`, index)
+        return
       }
       if (message && submit === false) {
         await submitData(message, index)
@@ -510,7 +518,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
       } else if (index !== 1000) {
 
         let responseText = formIoData.data.components[index].label
-        if (formIoData.data.components[index].tooltip !== "") {
+        if (formIoData.data.components[index].tooltip !== "" && formIoData.data.components[index].tooltip !== undefined) {
           responseText = formIoData.data.components[index].tooltip
         }
         if (formIoData.data.components[index].label.match(/{{(.*?)}}/g)) {
@@ -528,12 +536,11 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
             setInputDisabled(true)
           }
         }
-        
-        let typingTime = 1000 + responseText.length;
-        if (responseText.length > 150) {
-          typingTime = 1500 + responseText.length;
-        } else if (responseText.length > 500) {
-          typingTime = 3000 + responseText.length;
+        let typingTime = 1000 + responseText?.length;
+        if (responseText?.length > 150) {
+          typingTime = 1500 + responseText?.length;
+        } else if (responseText?.length > 500) {
+          typingTime = 3000 + responseText?.length;
         }
         toggleMsgLoader()
         setTimeout(() => {
@@ -547,7 +554,6 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
             redemptionLink = formIoData.data.components[index].placeholder.replace(`${name}=1234`, `${name}=${uuid}`).replace('campaign=1234', `campaign=${formIoData.data.title}`).replace(/ /g,"-");
           } else if (formIoData.data.components[index].placeholder.includes('transaction_id')) {
             //////////////// For swagbucks code
-            console.log('testing')
             if (urlParams && Object.keys(JSON.parse(urlParams)).length > 2) {
               let keys = Object.keys(JSON.parse(urlParams ? urlParams : ''));
               let key = keys.indexOf('transaction_id')
@@ -559,7 +565,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           } else {
             redemptionLink = formIoData.data.components[index].placeholder.replace(`${name}=1234`, `${name}=${formSubmissionId}`).replace('campaign=1234', `campaign=${formIoData.data.title}`).replace(/ /g,"-");
           }
-          console.log(redemptionLink)
+
           // if (uuid && shouldRedeem && shouldRedeem !== '2' && shouldRedeem !== '3' && shouldRedeem === '1'){
           //   redemptionLink = formIoData.data.components[index].placeholder.replace(`${name}=1234`, `${name}=${uuid}`).replace('campaign=1234', `campaign=${formIoData.data.title}`).replace(/ /g,"-");
           // }
@@ -615,8 +621,15 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           }
           setEndSurveyResponses(formIoData.data.components[index].data.values.filter(v => v.value.includes('END_SURVEY') ? v : null).map(v => v.label))
           setOtherResponses(formIoData.data.components[index].data.values.filter(v => v.value === 'OTHER' ? v : null).map(v => v.label))
+
+          // here it is
+          if (formIoData.data.components[index].data?.values.filter(v => v.value.includes('SCREENER_BLOCK_START')).length > 0) {
+            setSurveyBlock(true)
+          } else if (formIoData.data.components[index].data?.values.filter(v => v.value.includes('SCREENER_BLOCK_END')).length > 0) {
+            setSurveyBlock(false)
+            setScreenerBlockEnd(true)
+          }
           formIoData.data.components[index].data.values.map(v => v.value = v.label)
-          console.log('here they are', formIoData.data.components[index].data ?? [])
           setTimeout(() => {
             setQuickButtons(formIoData.data.components[index].data.values ?? [])
           }, typingTime - 10)
