@@ -228,8 +228,8 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
       console.log('screener block end', screenerBlockEnd, surveyBlock)
       let surveyResponses: string[] = []
       if (surveyBlock || screenerBlockEnd) {
-        setSurveyBlockResponses([...surveyBlockResponses, message.replaceAll(" ", "")])
-        surveyResponses = [...surveyBlockResponses, message.replaceAll(" ", "")]
+        setSurveyBlockResponses([...surveyBlockResponses, message.trim()[0]]) //This code expects the quick reply message to either be a letter or be prefixed by a letter e.g. A. option1, B. option2
+        surveyResponses = [...surveyBlockResponses, message.trim()[0]]
         setScreenerBlockEnd(false)
       }
 
