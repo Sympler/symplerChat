@@ -38,6 +38,7 @@ interface ChatProps {
   shouldRedeem?: string | null,
   uuid?: string | null,
   urlParams?: string | null,
+  urlFormSubmissionId?: string | null,
 }
 
 
@@ -50,6 +51,7 @@ const App: React.FC<ChatProps> = () => {
   const [uuid, setUuid] = useState<string | null>(null);
   const [uidName, setUidName] = useState<string | null>(null);
   const [urlParams, setUrlParams] = useState<string | null>(null)
+  const [urlformSubmissionId, setUrlFormSubmissionId] = useState('')
 
   useEffect(() => {
     const isBrowser = typeof window !== "undefined"
@@ -63,6 +65,10 @@ const App: React.FC<ChatProps> = () => {
       let uuid: string | null = null;
       if (uidName) {
         uuid = params[uidName];
+      }
+      if (params && params.formSubmissionId) {
+        setUrlFormSubmissionId(params.formSubmissionId)
+        delete params.formSubmissionId
       }
       setUrlParams(JSON.stringify(params))
       setUuid(uuid)
@@ -78,7 +84,7 @@ const App: React.FC<ChatProps> = () => {
     <div className="App">
       <NavBar />
       {endpoint && formName ?(
-        <SymplerChat endpoint={endpoint} formName={formName} shouldRedeem={shouldRedeem} uuid={uuid} uidName={uidName} urlParams={urlParams}/>
+        <SymplerChat endpoint={endpoint} formName={formName} shouldRedeem={shouldRedeem} uuid={uuid} uidName={uidName} urlParams={urlParams} urlFormSubmissionId={urlformSubmissionId}/>
       ): null}
     </div>
   );

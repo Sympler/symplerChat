@@ -50,6 +50,7 @@ interface ChatProps {
   uuid?: string | null
   uidName?: string | null
   urlParams?: string | null
+  urlFormSubmissionId?: string | null
 }
 interface formVariablesProps {
   key: string,
@@ -57,7 +58,7 @@ interface formVariablesProps {
 }
 
 
-const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uuid, uidName, urlParams}) => {
+const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uuid, uidName, urlParams, urlFormSubmissionId}) => {
   const [formIoData, setFormIoData] = useState<FormIoResponse>()
   const [sessionStarted, setSessionStarted] = useState(false);
   const [submit, setSubmit] = useState(false);
@@ -82,7 +83,15 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
   const newDate = new Date().toString();
   const [continueToForm, setContinueToForm] = useState(false)
   const [rejectionLink, setRejectionLink] = useState<string>()
+  const [hasLoadedUserResponses, setHasLoadedUserResponses] = useState(false)
+  const [initialized, setInitialized] = useState({queryParams: false, repeatRespondents: false, session: false, ip: false})
 
+  const setCookie = (cname: string, exdays: number, cvalue?: string) => {
+    const d = new Date();
+    d.setTime(d.getTime() + (exdays*24*60*60*1000));
+    let expires = "expires="+ d.toUTCString();
+    document.cookie = cname + "=" + cvalue + ";" + expires + ";path=/";
+  }
 
   const END_SURVEY = useMemo(() => {
     // Check form language
@@ -108,13 +117,9 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
   }, [formIoData])
 
 
-  useEffect(() => {
-    if(!formIoData && !continueToForm)
-    axios.get(formIoUrl).then(res => {
+  const checkForQueryParams = async () => {
+    await axios.get(formIoUrl).then(res => {
       const fioData: FormIoResponse = res
-      // if(!urlParams || urlParams === null || !fioData || !continueToForm || !formSubmissionId) {
-      //   return;
-      // }
       let params = JSON.parse(urlParams ? urlParams : '')
       if(Object.keys(params).length > 2) {
         let components: Object[] = []
@@ -178,42 +183,150 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
         setFormIoData(fioData)
         setContinueToForm(true)
       }
+      setInitialized(initialized => ({queryParams: true, repeatRespondents: initialized.repeatRespondents, session: initialized.session, ip: initialized.ip}))
     }).catch(error => {
       console.error('get error', error)
     })
-  }, [urlParams, formIoData, continueToForm, formSubmissionId])
+  }
 
-  useEffect(() => {
+  const checkForRepeatRespondents = () => {
     if (formName && document.cookie.includes(`SESSIONFORM${formName}=${formName}`)) {
       setCookiePresent(true)
       setIndex(1000)
     }
     setCookieCheck(true)
-  },[formName])
-  
-  useEffect(() => {
-    const getIp = async() => {
-      try {
-        // const ipResponse = await axios.get('https://api.ipgeolocation.io/ipgeo?apiKey=902c52a386fb4db59dd7d4c98e2dba2a');
-        const ipResponse = await axios.get(`https://ipinfo.io?token=36639d7493f191`)
-        setLocation(ipResponse.data)
-        const ip = ipResponse.data.ip
-        const vpnCheck = await axios.get(`https://dash-api.sympler.co/api/v1/vpncheck/${ip}`);
-        if (vpnCheck.data.response.block === 1) {
-          setIsVpn(true)
-          if (!cookiePresent) {
-            setIndex(1001)
-            toggleMsgLoader()
-            setTimeout(() => {
-              toggleMsgLoader()
-            }, 3000)
-            addResponseMessage(VPN_USER)
+    setInitialized(initialized => ({queryParams: initialized.queryParams, repeatRespondents: true, session: initialized.session, ip: initialized.ip}))
+  }
+
+  const addChatHistory = (responses: any, index: number) => {
+    const components = formIoData?.data.components ?? []
+    for(let i=0; i<index; i++) {
+      if (components[i].label !== undefined) {
+        if (components[i].label === 'GetTimeZone' ||
+          components[i].label === 'RejectionLink' ||
+          components[i].label === 'StateProvince' ||
+          components[i].label === 'GetLocation' ||
+          components[i].label === 'RedemptionFlow' ||
+          components[i].type === 'hidden'
+        ) {
+          // Do nothing
+        } else if (urlParams && Object.keys(JSON.parse(urlParams)).length > 2){
+          let keys = Object.keys(JSON.parse(urlParams ? urlParams : ''));
+          if (keys.includes(components[i].label)) {
+          } else if (components[i].type === 'hidden') {
+          } else {
+            addResponseMessage(components[i].label)
+            addUserMessage(responses[i][1])
           }
+        } else {
+          addResponseMessage(components[i].label)
+          addUserMessage(responses[i][1])
         }
-      } catch (error) {
-        console.error(error)
       }
     }
+  }
+
+  const checkForSession = () => {
+    if (formName && document.cookie.includes(`SUBMISSION${formName}=`) && !formSubmissionId) {
+      const cookies = document.cookie.split('; ')
+      cookies.map(c => {
+        const cookie = c.split('=')
+        let key = cookie[0]
+        let value = cookie[1]
+        if (key === `SUBMISSION${formName}` && index === 0) {
+          setFormSubmissionId(value)
+          setSessionStarted(true)
+          const getIndex = async () => {
+            await axios.get(`${formIoUrl}/submission/${formSubmissionId}`).then(res => {
+              const responses = res.data.data
+              if (responses) {
+                setIndex(Object.keys(responses).length)
+                setHasLoadedUserResponses(true)
+                addChatHistory(Object.entries(responses), Object.keys(responses).length)
+              }
+              
+            })
+            setInitialized(initialized => ({queryParams: initialized.queryParams, repeatRespondents: initialized.repeatRespondents, session: true, ip: initialized.ip}))
+          }
+          if (!hasLoadedUserResponses) {
+            getIndex()
+          }
+        }
+      })
+    } else if (urlFormSubmissionId && urlFormSubmissionId !== '' && !formSubmissionId) {
+      setFormSubmissionId(urlFormSubmissionId)
+      setSessionStarted(true)
+      const getIndex = async () => {
+        await axios.get(`${formIoUrl}/submission/${urlFormSubmissionId}`).then(res => {
+          const responses = res.data.data
+          if (responses) {
+            setIndex(Object.keys(responses).length)
+            setHasLoadedUserResponses(true)
+            addChatHistory(Object.entries(responses), Object.keys(responses).length)
+          }
+          
+        })
+        setInitialized(initialized => ({queryParams: initialized.queryParams, repeatRespondents: initialized.repeatRespondents, session: true, ip: initialized.ip}))
+      }
+      if (!hasLoadedUserResponses) {
+        getIndex()
+      }
+    } else if (formSubmissionId) {
+      setCookie(`SUBMISSION${formName}`, 365, formSubmissionId)
+    }
+  }
+
+  const getIp = async () => {
+    try {
+      // const ipResponse = await axios.get('https://api.ipgeolocation.io/ipgeo?apiKey=902c52a386fb4db59dd7d4c98e2dba2a');
+      const ipResponse = await axios.get(`https://ipinfo.io?token=36639d7493f191`)
+      setLocation(ipResponse.data)
+      const ip = ipResponse.data.ip
+      const vpnCheck = await axios.get(`https://dash-api.sympler.co/api/v1/vpncheck/${ip}`);
+      if (vpnCheck.data.response.block === 1) {
+        setIsVpn(true)
+        if (!cookiePresent) {
+          setIndex(1001)
+          toggleMsgLoader()
+          setTimeout(() => {
+            toggleMsgLoader()
+          }, 3000)
+          addResponseMessage(VPN_USER)
+        }
+      }
+    } catch (error) {
+      console.error(error)
+    }
+    setInitialized(initialized => ({queryParams: initialized.queryParams, repeatRespondents: initialized.repeatRespondents, session: initialized.repeatRespondents, ip: true}))
+  }
+
+  const isInitialized = () => {
+    if (initialized.queryParams === true &&
+        initialized.repeatRespondents === true &&
+        initialized.session === true &&
+        initialized.ip === true
+    ) {
+      return true
+    } else {
+      return false
+    }
+  }
+
+  useEffect(() => {
+    if(!formIoData && !continueToForm)
+    checkForQueryParams()
+  }, [urlParams, formIoData, continueToForm, formSubmissionId])
+
+  useEffect(() => {
+    checkForRepeatRespondents()
+  },[formName])
+
+  useEffect(() => {
+    if (formIoData)
+    checkForSession()
+  }, [formSubmissionId, formIoData])
+
+  useEffect(() => {
     if (cookieCheck) {
       getIp()
     }
@@ -221,11 +334,6 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
 
   const submitData = async (message: string, index: number) => {
     if (formIoData) {
-      // if (index < formIoData?.data.components.length - 1) {
-      //   toggleMsgLoader()
-      // }
-      //there it is
-      console.log('screener block end', screenerBlockEnd, surveyBlock)
       let surveyResponses: string[] = []
       if (surveyBlock || screenerBlockEnd) {
         setSurveyBlockResponses([...surveyBlockResponses, message.trim()[0]]) //This code expects the quick reply message to either be a letter or be prefixed by a letter e.g. A. option1, B. option2
@@ -262,7 +370,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           }).then(result => {
             setFormSubmissionId(result.data._id)
             setSessionStarted(true)
-            setIndex(index + 1)
+            setIndex(index => index + 1)
             setSubmit(false)
           }).catch(error => {
             console.error('error', error)
@@ -308,7 +416,6 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
             }
             const file = new File([blob],  `${formIoData.data.title.replaceAll(' ', '') + '_' + formIoData.data.components[index].key.substring(0, 30)}_fileUpload_${Date.now()}${getExtension(blob.type)}`, {type: blob.type})
             // const file = blob.type === 'video/mp4' ? new File([blob],  `${formIoData.data.components[index].key.substring(0, 30)}_fileUpload_${new Date()}.mp4`, {type: 'video/mp4'}) : new File([blob],  `${formIoData.data.components[index].key.substring(0, 30)}_fileUpload_${new Date()}`)
-            // console.log('file blbo', file)
             var formData = new FormData();
             formData.append('file', file)
             toggleMsgLoader();
@@ -324,8 +431,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
                   ...previousData
                 }
               }).then(result => {
-                // console.log('result from put', result)
-                setIndex(index + 1)
+                setIndex(index => index + 1)
                 setSubmit(false)
               }).catch(error => {
                 console.error('error', error)
@@ -335,18 +441,12 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
             })
           } else {
             obj[key] = message
-            // console.log('obj on put', obj)
-            // console.log('obj previous', previousData)
-            // console.log('submission id', formIoData.data._id)
             axios.put(`${formIoUrl}/submission/${formSubmissionId}`, {
               data: {
                 ...obj,
                 ...previousData
               }
             }).then(result => {
-              // console.log('result from put', result)
-              // console.log('message', message)
-              
               if (endSurveyResponses.includes(message)) {
                 setIndex(1000)
                 toggleInputDisabled()
@@ -358,7 +458,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
               } else if (surveyResponses.length > 0 && !surveyResponses.every(r => r === surveyResponses[0])) {
                 setIndex(1000)
               } else {
-                setIndex(index + 1)
+                setIndex(index => index + 1)
               }
               setSubmit(false)
             }).catch(error => {
@@ -380,15 +480,8 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           toggleInputDisabled();
           setInputDisabled(true)
         }
-        const setCookie = (cname: string, exdays: number, cvalue?: string) => {
-          const d = new Date();
-          d.setTime(d.getTime() + (exdays*24*60*60*1000));
-          let expires = "expires="+ d.toUTCString();
-          document.cookie = cname + "=" + cvalue + ";" + expires + ";path=/";
-        }
         if (index !== 1001) {
           setCookie(`SESSIONFORM${formName}`, 365, formName)
-          // console.log('all questions have been answered')
           // @ts-ignore
           window.gtag("event", `${formIoData.data.title} Form Completed`, {
             event_category: "Form",
@@ -501,7 +594,6 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
       }
       if (message && submit === false) {
         await submitData(message, index)
-        // addResponseMessage(formIoData.data.components[index].label)
         if (inputDisabled) {
           toggleInputDisabled()
           setInputDisabled(false)
@@ -569,15 +661,12 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           // if (uuid && shouldRedeem && shouldRedeem !== '2' && shouldRedeem !== '3' && shouldRedeem === '1'){
           //   redemptionLink = formIoData.data.components[index].placeholder.replace(`${name}=1234`, `${name}=${uuid}`).replace('campaign=1234', `campaign=${formIoData.data.title}`).replace(/ /g,"-");
           // }
-          // console.log('redemption link', redemptionLink);
-          // console.log(`should redeem ${shouldRedeem}`);
-          // console.log(`uuid ${uuid}`);
           // if ((!shouldRedeem && !uuid) || (uuid && shouldRedeem && shouldRedeem !== '2' && shouldRedeem !== '3' && shouldRedeem === '1')){
           setTimeout(() => {
             if (redemptionLink) {
               addLinkSnippet({
                 title: '',
-		linkMask: "Click Here!",
+		            linkMask: "Click Here!",
                 link: redemptionLink,
                 target: '_blank'
               })
@@ -657,18 +746,15 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           }
         }, 1500)
         setQuickButtons([])
-        // if (!inputDisabled) {
-        //   toggleInputDisabled()
-        //   setInputDisabled(true)
-        // }
       }
      
     }
   }
 
   useEffect(() => {
+    if (isInitialized())
     askQuestion()
-  }, [index, formIoData])
+  }, [index, formIoData, initialized])
 
 
 
