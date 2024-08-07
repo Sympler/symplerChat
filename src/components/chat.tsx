@@ -4,6 +4,7 @@ import 'react-chat-widget-custom/lib/styles.css';
 import axios from 'axios';
 import SliderInput from './slider/slider';
 import SelectBoxes from './selectBoxes/selectBoxes';
+import Dropdown from './dropdown/dropdown';
 
 export type TFile = {
   source?: string;
@@ -23,13 +24,20 @@ interface FormIoResponse {
         input: boolean,
         key: string,
         label: string,
+        inputMask: string,
+        prefix: string;
+        suffix: string;
         tooltip: string,
 		    defaultValue: string,
         placeholder: string,
         description: string,
         tableView: boolean,
         disabled?: boolean,
-        type: string
+        type: string,
+        tags: string[],
+        properties: {
+          [key: string]: string
+        }
         values: [{
           label: string,
           value: string,
@@ -75,6 +83,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
   const [location, setLocation] = useState<any>();
   const [cookieCheck, setCookieCheck] = useState(false);
   const [screenerBlockEnd, setScreenerBlockEnd] = useState(false)
+  const [isNumeric, setIsNumeric] = useState(false)
   // const [END_SURVEY, SET_END_SURVEY] = useState(`Okay, thanks so much! We don't have any other questions for you at this time, but we hope to talk to you in another study soon. Have a great day!`)
   const VPN_USER = `Please disable your vpn and refresh the page to continue with the survey.`
   // const formIoUrl = `https://${endpoint}.form.io/${formName}`
@@ -85,6 +94,8 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
   const [rejectionLink, setRejectionLink] = useState<string>()
   const [hasLoadedUserResponses, setHasLoadedUserResponses] = useState(false)
   const [initialized, setInitialized] = useState({queryParams: false, repeatRespondents: false, session: false, ip: false})
+  const [canToggleInput, setCanToggleInput] = useState(false)
+
 
   const setCookie = (cname: string, exdays: number, cvalue?: string) => {
     const d = new Date();
@@ -190,7 +201,9 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
   }
 
   const checkForRepeatRespondents = () => {
-    if (formName && document.cookie.includes(`SESSIONFORM${formName}=${formName}`)) {
+    console.log('cookie monster is hungry')
+    if (formName && document.cookie.includes(`SESSIONFORM${formName}=${formName}`) && formIoData && !formIoData.data.tags.includes('block_rr_off')) {
+      console.log('cookie monster has consumed')
       setCookiePresent(true)
       setIndex(1000)
     }
@@ -319,8 +332,8 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
 
   useEffect(() => {
     checkForRepeatRespondents()
-  },[formName])
-
+  },[formName, formIoData])
+console.log('initialized', initialized)
   useEffect(() => {
     if (formIoData)
     checkForSession()
@@ -332,7 +345,12 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
     }
   },[cookieCheck])
 
-  const submitData = async (message: string, index: number) => {
+  function playClick() { 
+    var audio = new Audio('/click.wav');
+    audio.play();
+  }
+
+  const submitData = async (message: string, index: number, endResponses?: string[]) => {
     if (formIoData) {
       let surveyResponses: string[] = []
       if (surveyBlock || screenerBlockEnd) {
@@ -431,6 +449,9 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
                   ...previousData
                 }
               }).then(result => {
+                // if (formIoData.data.components[index].disabled === true) {
+                //   toggleInputDisabled(false)
+                // }
                 setIndex(index => index + 1)
                 setSubmit(false)
               }).catch(error => {
@@ -447,20 +468,34 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
                 ...previousData
               }
             }).then(result => {
-              if (endSurveyResponses.includes(message)) {
+              if (formIoData.data.components[index].tags && formIoData.data.components[index].tags.length > 0 && formIoData.data.components[index].tags.includes('numeric')) {
+                let rangeStart = Number(formIoData.data.components[index].properties.rangeStart)
+                let rangeEnd = Number(formIoData.data.components[index].properties.rangeEnd)
+                let number = Number(message)
+                if (rangeStart !== undefined && rangeEnd !== undefined) {
+                  if (number < rangeStart || number > rangeEnd) {
+                    setIndex(1000)
+                    return
+                  }
+                }
+              }
+
+              if (endSurveyResponses.includes(message) || endResponses?.includes(message)) {
                 setIndex(1000)
-                toggleInputDisabled()
-                setInputDisabled(true)
+                toggleInputDisabled(true)
               } else if (message.includes('invalidUrl')) {
                 setIndex(1000)
-                toggleInputDisabled()
-                setInputDisabled(true)
+                toggleInputDisabled(true)
               } else if (surveyResponses.length > 0 && !surveyResponses.every(r => r === surveyResponses[0])) {
                 setIndex(1000)
               } else {
+                // if (formIoData.data.components[index].disabled === true) {
+                //   toggleInputDisabled(false)
+                // }
                 setIndex(index => index + 1)
               }
               setSubmit(false)
+              // toggleInputDisabled(false);
             }).catch(error => {
               console.error('error', error)
             })
@@ -473,13 +508,12 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
     }
   }
 
-  const askQuestion = async (message?: string) => {
+
+  const askQuestion = async (message?: string, ) => {
     if (formIoData) {
+      toggleInputDisabled(false)
       if (index >= formIoData?.data.components.length - 1) {
-        if (!inputDisabled) {
-          toggleInputDisabled();
-          setInputDisabled(true)
-        }
+        toggleInputDisabled(true);
         if (index !== 1001) {
           setCookie(`SESSIONFORM${formName}`, 365, formName)
           // @ts-ignore
@@ -547,10 +581,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           if (!isVpn) {
             setIndex(1000)
           }
-          if (!inputDisabled) {
-            toggleInputDisabled()
-            setInputDisabled(true)
-          }
+          toggleInputDisabled(true)
           return
         } else {
           // await submitData(location?.state_prov, index)
@@ -594,21 +625,14 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
       }
       if (message && submit === false) {
         await submitData(message, index)
-        if (inputDisabled) {
-          toggleInputDisabled()
-          setInputDisabled(false)
-        }
-        if (formIoData.data.components[index].data) {
-          if (!inputDisabled) {
-            toggleInputDisabled();
-            setInputDisabled(true)
-          }
+        // toggleInputDisabled(false)
+        if (formIoData.data.components[index].data && Object.keys(formIoData.data.components[index].data).length > 0) {
+          toggleInputDisabled(true);
           setQuickButtons(formIoData.data.components[index].data.values ?? [])
         } else {
           setQuickButtons([])
         }
       } else if (index !== 1000) {
-
         let responseText = formIoData.data.components[index].label
         if (formIoData.data.components[index].tooltip !== "" && formIoData.data.components[index].tooltip !== undefined) {
           responseText = formIoData.data.components[index].tooltip
@@ -623,10 +647,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           })
         }
         if (formIoData.data.components[index].disabled === true) {
-          if (!inputDisabled) {
-            toggleInputDisabled()
-            setInputDisabled(true)
-          }
+          toggleInputDisabled(true)
         }
         let typingTime = 1000 + responseText?.length;
         if (responseText?.length > 150) {
@@ -634,9 +655,19 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
         } else if (responseText?.length > 500) {
           typingTime = 3000 + responseText?.length;
         }
+        
+        if (formIoData.data.components[index].tags && formIoData.data.components[index].tags.length > 0 && formIoData.data.components[index].tags.includes('numeric') && !isNumeric) {
+          setIsNumeric(true)
+        } else {
+          setIsNumeric(false)
+        }
+
         toggleMsgLoader()
         setTimeout(() => {
           addResponseMessage(responseText)
+          if (index > 1) {
+            playClick()
+          }
           toggleMsgLoader()
         }, typingTime)
         if(formIoData.data.components[index].placeholder !== '' && formIoData.data.components[index].placeholder !== undefined && shouldSendRedemptionLink) {
@@ -675,50 +706,60 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
     
 
         }
+
         if (formIoData.data.components[index].type === "selectboxes") {
           let labels = formIoData.data.components[index].values
-          const sliderResponse = async (value: string) => {
+          const endResponses = labels.filter(v => v.value.includes('END_SURVEY') ? v : null).map(v => v.label)
+          setEndSurveyResponses(labels.filter(v => v.value.includes('END_SURVEY') ? v : null).map(v => v.label))
+
+          const selectBoxesResponse = async (value: string) => {
             addUserMessage(value)
+            // toggleInputDisabled(false);
+            await submitData(value, index, endResponses)
+          }
+          toggleInputDisabled(true);
+          setTimeout(() => {
+            renderCustomComponent(SelectBoxes, {labels: labels, confirmValue: selectBoxesResponse}, false);
+          }, typingTime + 10)
+        }
+        if (formIoData.data.components[index].type === 'dropdown') {
+          let labels = formIoData.data.components[index].values
+
+          const dropdownResponse = async (value: string) => {
+            addUserMessage(value)
+            // toggleInputDisabled(false);
             await submitData(value, index)
           }
-          if (!inputDisabled) {
-            toggleInputDisabled();
-            setInputDisabled(true)
-          }
+            toggleInputDisabled(true);
           setTimeout(() => {
-            renderCustomComponent(SelectBoxes, {labels: labels, confirmValue: sliderResponse}, false);
+            renderCustomComponent(Dropdown, {labels: labels, confirmValue: dropdownResponse}, false);
           }, typingTime + 10)
         }
         if(formIoData.data.components[index].type === 'radio') {
           let labels = formIoData.data.components[index].values
           const sliderResponse = async (value: string) => {
             addUserMessage(value)
+            // toggleInputDisabled(false);
             await submitData(value, index)
           }
-          if (!inputDisabled) {
-            toggleInputDisabled();
-            setInputDisabled(true)
-          }
+          toggleInputDisabled(true);
           setTimeout(() => {
             renderCustomComponent(SliderInput, {min: 0, max: labels.length - 1, labels: labels, confirmValue: sliderResponse}, false);
           }, typingTime - 10)
         }
-        if (formIoData.data.components[index].data) {
-          if(!inputDisabled) {
-            toggleInputDisabled();
-            setInputDisabled(true)
-          }
-          setEndSurveyResponses(formIoData.data.components[index].data.values.filter(v => v.value.includes('END_SURVEY') ? v : null).map(v => v.label))
-          setOtherResponses(formIoData.data.components[index].data.values.filter(v => v.value === 'OTHER' ? v : null).map(v => v.label))
+        if (formIoData.data.components[index].type === 'select') {
+          toggleInputDisabled(true);
+          setEndSurveyResponses(formIoData.data.components[index].data.values?.filter(v => v.value.includes('END_SURVEY') ? v : null).map(v => v.label))
+          setOtherResponses(formIoData.data.components[index].data.values?.filter(v => v.value === 'OTHER' ? v : null).map(v => v.label))
 
           // here it is
-          if (formIoData.data.components[index].data?.values.filter(v => v.value.includes('SCREENER_BLOCK_START')).length > 0) {
+          if (formIoData.data.components[index].data?.values?.filter(v => v.value.includes('SCREENER_BLOCK_START')).length > 0) {
             setSurveyBlock(true)
-          } else if (formIoData.data.components[index].data?.values.filter(v => v.value.includes('SCREENER_BLOCK_END')).length > 0) {
+          } else if (formIoData.data.components[index].data?.values?.filter(v => v.value.includes('SCREENER_BLOCK_END')).length > 0) {
             setSurveyBlock(false)
             setScreenerBlockEnd(true)
           }
-          formIoData.data.components[index].data.values.map(v => v.value = v.label)
+          formIoData.data.components[index].data.values?.map(v => v.value = v.label)
           setTimeout(() => {
             setQuickButtons(formIoData.data.components[index].data.values ?? [])
           }, typingTime - 10)
@@ -736,6 +777,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           toggleMsgLoader()
 		      if (!rejectionLink){
                 addResponseMessage(END_SURVEY)
+                toggleInputDisabled(true)
           } else {
             addLinkSnippet({
               title: END_SURVEY,
@@ -743,6 +785,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
               link: rejectionLink,
               target: '_blank'
             })
+            toggleInputDisabled(true)
           }
         }, 1500)
         setQuickButtons([])
@@ -760,12 +803,10 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
 
   const hanleQuckButtonClick = (e: string) => {
     if (otherReponses.includes(e)) {
-      if(inputDisabled) {
-        toggleInputDisabled()
-        setInputDisabled(false)
-      }
+      // toggleInputDisabled(false)
       setQuickButtons([])
     } else {
+      // toggleInputDisabled(false)
       addUserMessage(e);
       askQuestion(e);
     }
@@ -775,16 +816,21 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
    toggleWidget();
   }, []);
 
+
   return (
     <div className="App">
       <Widget
         quickButtonsInMessage={true}
+        fullScreenMode={true}
+        showCloseButton={false}
+        isShowEmoji={true}
+        emojis
         handleNewUserMessage={askQuestion}
         title="Messages"
         subtitle="Sympler"
         handleQuickButtonClicked={hanleQuckButtonClick}
-        emojis={false}
         imagePreview={true}
+        isNumeric={isNumeric}
       />
     </div>
   );

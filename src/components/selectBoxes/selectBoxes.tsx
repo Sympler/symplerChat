@@ -7,6 +7,7 @@ export interface Slider {
     labels: [{
         label: string;
         value: string;
+        shortcut?: string;
     }]
     confirmValue: (value: string) => void;
 }
@@ -15,12 +16,27 @@ const SelectBoxes = ({labels, confirmValue}: Slider) => {
     const [values, setValues] = useState<string[]>([]);
     const [showContents, setShowContents] = useState(true);
     const isMobile = window.innerWidth <= 720;
+    const exclusiveBoxes = labels.filter(l => l.shortcut === 'Z')
 
-    const updateValue = (value: string) => {
+    const updateValue = (value: string, shortcut: string | undefined) => {
+        if (shortcut && shortcut === 'Z') {
+            if (values.includes(value)) {
+                setValues([])
+                return
+            } else {
+                setValues([value])
+                return
+            }
+        }
         if (values.includes(value)) {
             setValues([...values.filter(v => v !== value)])
         } else {
-            setValues([...values, value])
+            const valueCheck = values.find(v => exclusiveBoxes.map(e => e.label).includes(v))
+            if (valueCheck && valueCheck?.length > 0) {
+                setValues([value])
+            } else {
+                setValues([...values, value])
+            }
         }
     }
 
@@ -36,12 +52,13 @@ const SelectBoxes = ({labels, confirmValue}: Slider) => {
                     {labels.map((l, key) => (
                         <div key={key} style={isMobile ? {marginBottom: '20px'} : {marginBottom: '10px'}}>
                             <input 
+                                checked={values.includes(l.label)}
                                 id={l.value} 
                                 type={'checkbox'}
                                 style={{
                                     cursor: 'pointer'
                                 }}
-                                onClick={() => updateValue(l.label)}
+                                onChange={() => updateValue(l.label, l.shortcut)}
                                 value={l.label}
                                 name={l.label}
                             />
