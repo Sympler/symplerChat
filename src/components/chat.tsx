@@ -5,6 +5,8 @@ import axios from 'axios';
 import SliderInput from './slider/slider';
 import SelectBoxes from './selectBoxes/selectBoxes';
 import Dropdown from './dropdown/dropdown';
+import ImageRenderer from './imageRenderer/imageRenderer';
+import VideoRenderer from './videoRenderer/videoRenderer';
 
 export type TFile = {
   source?: string;
@@ -705,6 +707,22 @@ console.log('initialized', initialized)
           }, typingTime)
     
 
+        }
+
+        if (formIoData.data.components[index].tags && formIoData.data.components[index].tags.length > 0 && formIoData.data.components[index].tags.includes('images')) {
+          let images = formIoData.data.components[index].properties.images.split(',')
+          console.log('images', images)
+          setTimeout(() => {
+            renderCustomComponent(ImageRenderer, {images}, false)
+          }, typingTime + 10)
+        }
+
+        if (formIoData.data.components[index].tags && formIoData.data.components[index].tags.length > 0 && formIoData.data.components[index].tags.includes('videos')) {
+          let videos = formIoData.data.components[index].properties.videos.split(',')
+          console.log('images', videos)
+          setTimeout(() => {
+            renderCustomComponent(VideoRenderer, {videos}, false)
+          }, typingTime + 10)
         }
 
         if (formIoData.data.components[index].type === "selectboxes") {
