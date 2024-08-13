@@ -7,7 +7,7 @@ export interface Slider {
     labels: [{
         label: string;
         value: string;
-        shortcut?: string;
+        exclusive?: string;
     }]
     confirmValue: (value: string) => void;
 }
@@ -16,10 +16,10 @@ const SelectBoxes = ({labels, confirmValue}: Slider) => {
     const [values, setValues] = useState<string[]>([]);
     const [showContents, setShowContents] = useState(true);
     const isMobile = window.innerWidth <= 720;
-    const exclusiveBoxes = labels.filter(l => l.shortcut === 'Z')
+    const exclusiveBoxes = labels.filter(l => l.exclusive === 'Z')
 
-    const updateValue = (value: string, shortcut: string | undefined) => {
-        if (shortcut && shortcut === 'Z') {
+    const updateValue = (value: string, exclusive: string | undefined) => {
+        if (exclusive && exclusive === 'Z') {
             if (values.includes(value)) {
                 setValues([])
                 return
@@ -58,7 +58,7 @@ const SelectBoxes = ({labels, confirmValue}: Slider) => {
                                 style={{
                                     cursor: 'pointer'
                                 }}
-                                onChange={() => updateValue(l.label, l.shortcut)}
+                                onChange={() => updateValue(l.label, l.exclusive)}
                                 value={l.label}
                                 name={l.label}
                             />

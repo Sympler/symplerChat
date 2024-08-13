@@ -67,6 +67,11 @@ interface formVariablesProps {
   value: string,
 }
 
+interface ResolvePaths {
+  label: string,
+  value: string
+}
+
 
 const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uuid, uidName, urlParams, urlFormSubmissionId}) => {
   const [formIoData, setFormIoData] = useState<FormIoResponse>()
@@ -97,6 +102,10 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
   const [hasLoadedUserResponses, setHasLoadedUserResponses] = useState(false)
   const [initialized, setInitialized] = useState({queryParams: false, repeatRespondents: false, session: false, ip: false})
   const [canToggleInput, setCanToggleInput] = useState(false)
+  const [pathResponses, setPathResponses] = useState<ResolvePaths[]>([])
+  const [path, setPath] = useState("")
+  const [resolvePaths, setResolvePaths] = useState<ResolvePaths[]>([])
+  const [pathChanged, setPathChanged] = useState(false)
 
 
   const setCookie = (cname: string, exdays: number, cvalue?: string) => {
@@ -203,9 +212,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
   }
 
   const checkForRepeatRespondents = () => {
-    console.log('cookie monster is hungry')
     if (formName && document.cookie.includes(`SESSIONFORM${formName}=${formName}`) && formIoData && !formIoData.data.tags.includes('block_rr_off')) {
-      console.log('cookie monster has consumed')
       setCookiePresent(true)
       setIndex(1000)
     }
@@ -235,7 +242,12 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           }
         } else {
           addResponseMessage(components[i].label)
-          addUserMessage(responses[i][1])
+          let userMessage = responses[i][1]
+          if (typeof userMessage === 'object') {
+            const messageKeys = Object.keys(userMessage).filter(key => userMessage[key])
+            userMessage = messageKeys.join(',')
+          }
+          addUserMessage(userMessage)
         }
       }
     }
@@ -252,7 +264,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           setFormSubmissionId(value)
           setSessionStarted(true)
           const getIndex = async () => {
-            await axios.get(`${formIoUrl}/submission/${formSubmissionId}`).then(res => {
+            await axios.get(`${formIoUrl}/submission/${value}`).then(res => {
               const responses = res.data.data
               if (responses) {
                 setIndex(Object.keys(responses).length)
@@ -333,13 +345,15 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
   }, [urlParams, formIoData, continueToForm, formSubmissionId])
 
   useEffect(() => {
+    if (formIoData && initialized.repeatRespondents === true)
+    checkForSession()
+  }, [formSubmissionId, formIoData, initialized])
+
+  useEffect(() => {
+    if (formName && formIoData)
     checkForRepeatRespondents()
   },[formName, formIoData])
-console.log('initialized', initialized)
-  useEffect(() => {
-    if (formIoData)
-    checkForSession()
-  }, [formSubmissionId, formIoData])
+
 
   useEffect(() => {
     if (cookieCheck) {
@@ -352,7 +366,7 @@ console.log('initialized', initialized)
     audio.play();
   }
 
-  const submitData = async (message: string, index: number, endResponses?: string[]) => {
+  const submitData = async (message: string, index: number, endResponses?: string[], pResponses?: ResolvePaths[]) => {
     if (formIoData) {
       let surveyResponses: string[] = []
       if (surveyBlock || screenerBlockEnd) {
@@ -482,7 +496,38 @@ console.log('initialized', initialized)
                 }
               }
 
-              if (endSurveyResponses.includes(message) || endResponses?.includes(message)) {
+
+              // Set user's path if there is a path associated with a response
+              let newPathChange = false
+              if (
+       (           (pathResponses && pathResponses.filter(p => p.label.trim() === message.trim())) ||
+                  (pResponses && pResponses.filter(p => p.label.trim() === message.trim())))
+                  &&
+                  !(endSurveyResponses.includes(message) ||
+                  endResponses?.includes(message))) 
+              {
+                  let p = pathResponses.find(p => p.label.trim().includes(message.trim())) //?.value.replace('[', '').replace(']', '')
+                  if (p === undefined && pResponses) {
+                    p = pResponses.find(p => message.trim().includes(p.label.trim()))
+                  }
+                  if (p && p.value) {
+                    setPath(p.value.replace('[', '').replace(']', ''))
+                    if (path !== '' && path !== p?.value.replace('[', '').replace(']', '')) { //Ensure that the user is still on the same path through every path question
+                      setPathChanged(true)
+                      newPathChange = true
+                    } else {
+                      setPathChanged(false)
+                      newPathChange = false
+                    }
+
+                    if (path === '' && p) {
+                      newPathChange = true
+                      setPathChanged(true)
+                    }
+                  }
+              }
+          
+              if (endSurveyResponses.includes(message) || endResponses?.includes(message) || endResponses?.find(e => message.includes(e)) || endSurveyResponses?.find(e => message.includes(e))) {
                 setIndex(1000)
                 toggleInputDisabled(true)
               } else if (message.includes('invalidUrl')) {
@@ -490,12 +535,29 @@ console.log('initialized', initialized)
                 toggleInputDisabled(true)
               } else if (surveyResponses.length > 0 && !surveyResponses.every(r => r === surveyResponses[0])) {
                 setIndex(1000)
-              } else {
+              } else if (
+                otherReponses.find(o => endSurveyResponses.map(e => e.trim() === o.trim())) && 
+                !formIoData.data.components[index]?.data?.values.find(v => v?.value === message)
+              ) {
+                setIndex(1000)
+              } else if (path && resolvePaths && resolvePaths.length > 0) { //  End study if a specific path is required to continue
+                if (!resolvePaths.find(r => r.label.trim() === message.trim())?.value.includes(path) && pathChanged === false && newPathChange === false) {
+                  setIndex(1000)
+                  toggleInputDisabled(true)
+                  setResolvePaths([])
+                } else {
+                  setIndex(index => index + 1)
+                }
+              }
+              else {
                 // if (formIoData.data.components[index].disabled === true) {
                 //   toggleInputDisabled(false)
                 // }
                 setIndex(index => index + 1)
+                setOtherResponses([''])
+                // setEndSurveyResponses(['']) // Clear out end responses in case questions have duplicate labels
               }
+
               setSubmit(false)
               // toggleInputDisabled(false);
             }).catch(error => {
@@ -510,9 +572,11 @@ console.log('initialized', initialized)
     }
   }
 
-
   const askQuestion = async (message?: string, ) => {
     if (formIoData) {
+      setOtherResponses([''])
+      //setEndSurveyResponses(['']) // Clear out end responses in case questions have duplicate labels
+      const currentIndex = formIoData.data.components[index]
       toggleInputDisabled(false)
       if (index >= formIoData?.data.components.length - 1) {
         toggleInputDisabled(true);
@@ -635,11 +699,11 @@ console.log('initialized', initialized)
           setQuickButtons([])
         }
       } else if (index !== 1000) {
-        let responseText = formIoData.data.components[index].label
-        if (formIoData.data.components[index].tooltip !== "" && formIoData.data.components[index].tooltip !== undefined) {
-          responseText = formIoData.data.components[index].tooltip
+        let responseText = currentIndex?.label
+        if (formIoData.data.components[index]?.tooltip !== "" && formIoData.data.components[index]?.tooltip !== undefined) {
+          responseText = formIoData.data.components[index]?.tooltip
         }
-        if (formIoData.data.components[index].label.match(/{{(.*?)}}/g)) {
+        if (formIoData.data.components[index]?.label.match(/{{(.*?)}}/g)) {
           let matches = formIoData.data.components[index].label.match(/{{(.*?)}}/g);
 
           formVariables.map(v => {
@@ -648,7 +712,7 @@ console.log('initialized', initialized)
             }
           })
         }
-        if (formIoData.data.components[index].disabled === true) {
+        if (formIoData.data.components[index]?.disabled === true) {
           toggleInputDisabled(true)
         }
         let typingTime = 1000 + responseText?.length;
@@ -658,7 +722,7 @@ console.log('initialized', initialized)
           typingTime = 3000 + responseText?.length;
         }
         
-        if (formIoData.data.components[index].tags && formIoData.data.components[index].tags.length > 0 && formIoData.data.components[index].tags.includes('numeric') && !isNumeric) {
+        if (formIoData.data.components[index]?.tags && formIoData.data.components[index]?.tags.length > 0 && formIoData.data.components[index]?.tags.includes('numeric') && !isNumeric) {
           setIsNumeric(true)
         } else {
           setIsNumeric(false)
@@ -672,7 +736,7 @@ console.log('initialized', initialized)
           }
           toggleMsgLoader()
         }, typingTime)
-        if(formIoData.data.components[index].placeholder !== '' && formIoData.data.components[index].placeholder !== undefined && shouldSendRedemptionLink) {
+        if(formIoData.data.components[index]?.placeholder !== '' && formIoData.data.components[index]?.placeholder !== undefined && shouldSendRedemptionLink) {
           const name = uidName ?? 'uid';
           let redemptionLink: string | undefined;
           if (uuid) {
@@ -711,7 +775,6 @@ console.log('initialized', initialized)
 
         if (formIoData.data.components[index].tags && formIoData.data.components[index].tags.length > 0 && formIoData.data.components[index].tags.includes('images')) {
           let images = formIoData.data.components[index].properties.images.split(',')
-          console.log('images', images)
           setTimeout(() => {
             renderCustomComponent(ImageRenderer, {images}, false)
           }, typingTime + 10)
@@ -719,21 +782,34 @@ console.log('initialized', initialized)
 
         if (formIoData.data.components[index].tags && formIoData.data.components[index].tags.length > 0 && formIoData.data.components[index].tags.includes('videos')) {
           let videos = formIoData.data.components[index].properties.videos.split(',')
-          console.log('images', videos)
           setTimeout(() => {
             renderCustomComponent(VideoRenderer, {videos}, false)
           }, typingTime + 10)
         }
 
         if (formIoData.data.components[index].type === "selectboxes") {
+          const originalObject = JSON.parse(JSON.stringify(formIoData)) as FormIoResponse
+          const pResponses = originalObject?.data.components[index]?.values.filter(v => v.value.includes('[PATH_')).map(p => {
+            return {value: p.value.trim(), label: p.label.trim()}
+          })
+
+
+          if (pResponses && pResponses.length > 0) {
+            setPathResponses((previousResponses) => [...previousResponses, ...pResponses])
+          }
+          
+          // const rPaths = originalObject?.data.components[index].data.values?.filter(v => v.value.includes('RESOLVE'))
+          // setResolvePaths([...resolvePaths, ...rPaths])
+
+
           let labels = formIoData.data.components[index].values
           const endResponses = labels.filter(v => v.value.includes('END_SURVEY') ? v : null).map(v => v.label)
-          setEndSurveyResponses(labels.filter(v => v.value.includes('END_SURVEY') ? v : null).map(v => v.label))
+          // setEndSurveyResponses(labels.filter(v => v.value.includes('END_SURVEY') ? v : null).map(v => v.label))
 
           const selectBoxesResponse = async (value: string) => {
             addUserMessage(value)
             // toggleInputDisabled(false);
-            await submitData(value, index, endResponses)
+            await submitData(value, index, endResponses, pResponses)
           }
           toggleInputDisabled(true);
           setTimeout(() => {
@@ -767,10 +843,19 @@ console.log('initialized', initialized)
         }
         if (formIoData.data.components[index].type === 'select') {
           toggleInputDisabled(true);
-          setEndSurveyResponses(formIoData.data.components[index].data.values?.filter(v => v.value.includes('END_SURVEY') ? v : null).map(v => v.label))
-          setOtherResponses(formIoData.data.components[index].data.values?.filter(v => v.value === 'OTHER' ? v : null).map(v => v.label))
+          const originalObject = JSON.parse(JSON.stringify(formIoData)) as FormIoResponse
+          const pResponses = originalObject?.data.components[index].data.values.filter(v => v.value.includes('[PATH_')).map(p => {
+            return {value: p.value.trim(), label: p.label.trim()}
+          })
+          setPathResponses((previousResponses) => [...previousResponses, ...pResponses])
+          
+          const rPaths = originalObject?.data.components[index].data.values?.filter(v => v.value.includes('RESOLVE'))
+          setResolvePaths([...resolvePaths, ...rPaths])
 
-          // here it is
+          setEndSurveyResponses(originalObject.data.components[index].data.values?.filter(v => v.value.includes('END_SURVEY') ? v : null).map(v => v.label))
+          setOtherResponses(originalObject.data.components[index].data.values?.filter(v => v.value.includes('OTHER') ? v : null).map(v => v.label))
+
+
           if (formIoData.data.components[index].data?.values?.filter(v => v.value.includes('SCREENER_BLOCK_START')).length > 0) {
             setSurveyBlock(true)
           } else if (formIoData.data.components[index].data?.values?.filter(v => v.value.includes('SCREENER_BLOCK_END')).length > 0) {
@@ -821,7 +906,7 @@ console.log('initialized', initialized)
 
   const hanleQuckButtonClick = (e: string) => {
     if (otherReponses.includes(e)) {
-      // toggleInputDisabled(false)
+      toggleInputDisabled(false)
       setQuickButtons([])
     } else {
       // toggleInputDisabled(false)
