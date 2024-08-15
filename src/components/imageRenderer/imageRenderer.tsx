@@ -1,33 +1,45 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 // @ts-ignore
 import ModalImage from "react-modal-image";
 // import "./styles.css";
 
 export interface Slider {
     images: Array<string>
+    shouldRandomize?: boolean
+    updateImageOrder: (order: string) => void
 }
 
-const ImageRenderer = ({images}: Slider) => {
+const ImageRenderer = ({images, shouldRandomize, updateImageOrder}: Slider) => {
+    const [sortedImages, setSortedImages] = useState<string[]>([])
 
-    // const expandImage = (image: string) => {
-    //     window.open(image, '_blank')?.focus()
-    // }
-    
+    useEffect(() => {
+        if (sortedImages.length === images.length) {
+            const sortedIndexes = sortedImages.map(s => images.indexOf(s))
+            updateImageOrder(sortedIndexes.map(i => i + 1).join(','))
+        }
+    }, [sortedImages, images, updateImageOrder])
+
+    useEffect(() => {
+        if (shouldRandomize) {
+            const forSorting = [...images]
+            const sort = [...forSorting.sort((a, b) => 0.5 - Math.random())]
+            setSortedImages(sort)
+        } else {
+            setSortedImages(images)
+        }
+    }, [shouldRandomize, images])
+
     return (
         <>
-            {/* {images.map(i => {
-                return <img src={i.trim()} style={{maxWidth: '300px', cursor: 'pointer', padding: "10px", objectFit: 'cover'}} onClick={() => expandImage(i.trim())} />
-            })} */}
-            {images.map((i, key)=> {
+            {sortedImages.map((i, key)=> {
                 return (
-                    <div key={key} style={{maxWidth: '300px', cursor: 'pointer', padding: '10px'}}>
+                    <div key={key} style={{maxWidth: '300px', cursor: 'pointer', padding: '10px'}} >
                         <ModalImage
                             hideDownload
                             small={i}
                             large={i}
                         />
                     </div>
-                    
                 )
             })}
         </>

@@ -106,6 +106,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
   const [path, setPath] = useState("")
   const [resolvePaths, setResolvePaths] = useState<ResolvePaths[]>([])
   const [pathChanged, setPathChanged] = useState(false)
+  const [imageOrder, setImageOrder] = useState('')
 
 
   const setCookie = (cname: string, exdays: number, cvalue?: string) => {
@@ -361,6 +362,10 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
     }
   },[cookieCheck])
 
+  function updateImageOrder(order: string) {
+    setImageOrder(order)
+  }
+
   function playClick() { 
     var audio = new Audio('/click.wav');
     audio.play();
@@ -478,10 +483,23 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
             })
           } else {
             obj[key] = message
+            if (path && path !== "") {
+              obj['path'] = path
+            }
+
+            if (
+              formIoData.data.components[index].tags && 
+              formIoData.data.components[index].tags.length > 0 && 
+              (formIoData.data.components[index].tags.includes('images') ||
+                formIoData.data.components[index].tags.includes('videos'))
+            ) {
+              obj[`mediaOrder${key.trim()}`] = imageOrder
+            }
+
             axios.put(`${formIoUrl}/submission/${formSubmissionId}`, {
               data: {
+                ...previousData,
                 ...obj,
-                ...previousData
               }
             }).then(result => {
               if (formIoData.data.components[index].tags && formIoData.data.components[index].tags.length > 0 && formIoData.data.components[index].tags.includes('numeric')) {
@@ -500,7 +518,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
               // Set user's path if there is a path associated with a response
               let newPathChange = false
               if (
-       (           (pathResponses && pathResponses.filter(p => p.label.trim() === message.trim())) ||
+                  ((pathResponses && pathResponses.filter(p => p.label.trim() === message.trim())) ||
                   (pResponses && pResponses.filter(p => p.label.trim() === message.trim())))
                   &&
                   !(endSurveyResponses.includes(message) ||
@@ -669,6 +687,14 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           await submitData('Error', index)
           return
         }
+      } else if (formIoData.data.components[index].label.includes('Path')) {
+        setSubmit(true)
+        await submitData(" ", index)
+        return
+      } else if (formIoData.data.components[index].label.includes('MediaOrder')) {
+        setSubmit(true)
+        await submitData(" ", index)
+        return
       } else if (urlParams && Object.keys(JSON.parse(urlParams)).length > 2){
         // Save url parameter values
         let keys = Object.keys(JSON.parse(urlParams ? urlParams : ''));
@@ -775,15 +801,17 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
 
         if (formIoData.data.components[index].tags && formIoData.data.components[index].tags.length > 0 && formIoData.data.components[index].tags.includes('images')) {
           let images = formIoData.data.components[index].properties.images.split(',')
+          let shouldRandomize = currentIndex.properties.shouldRandomize.toString() === '1'
           setTimeout(() => {
-            renderCustomComponent(ImageRenderer, {images}, false)
+            renderCustomComponent(ImageRenderer, {images, shouldRandomize, updateImageOrder}, false)
           }, typingTime + 10)
         }
 
         if (formIoData.data.components[index].tags && formIoData.data.components[index].tags.length > 0 && formIoData.data.components[index].tags.includes('videos')) {
           let videos = formIoData.data.components[index].properties.videos.split(',')
+          const videoShouldRandomize = formIoData.data.components[index].properties.shouldRandomize.toString() === '1'
           setTimeout(() => {
-            renderCustomComponent(VideoRenderer, {videos}, false)
+            renderCustomComponent(VideoRenderer, {videos, videoShouldRandomize, updateImageOrder}, false)
           }, typingTime + 10)
         }
 
