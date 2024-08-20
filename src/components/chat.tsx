@@ -230,9 +230,14 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           components[i].label === 'StateProvince' ||
           components[i].label === 'GetLocation' ||
           components[i].label === 'RedemptionFlow' ||
-          components[i].type === 'hidden'
+          components[i].type === 'hidden' ||
+          components[i].label === 'Path' ||
+          components[i].label.includes('MediaOrder') ||
+          components[i].label === 'ScreenOutuser'
         ) {
-          // Do nothing
+          if (components[i].label === 'Path') {
+            setPath(responses[i][1])
+          }
         } else if (urlParams && Object.keys(JSON.parse(urlParams)).length > 2){
           let keys = Object.keys(JSON.parse(urlParams ? urlParams : ''));
           if (keys.includes(components[i].label)) {
@@ -243,6 +248,16 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           }
         } else {
           addResponseMessage(components[i].label)
+          if (components[i].tags && components[i].tags.length > 0 && components[i].tags.includes('images')) {
+            const images = components[i].properties.images.split(',')
+            const shouldRandomize = components[i].properties.shouldRandomize.toString() === '1'
+            renderCustomComponent(ImageRenderer, {images, shouldRandomize, updateImageOrder}, false)
+          }
+          if (components[i].tags && components[i].tags.length > 0 && components[i].tags.includes('videos')) {
+            const videos = components[i].properties.videos.split(',')
+            const shouldRandomize = components[i].properties.shouldRandomize.toString() === '1'
+            renderCustomComponent(VideoRenderer, {videos, shouldRandomize, updateImageOrder}, false)
+          }
           let userMessage = responses[i][1]
           if (typeof userMessage === 'object') {
             const messageKeys = Object.keys(userMessage).filter(key => userMessage[key])
@@ -371,6 +386,39 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
     audio.play();
   }
 
+  const screenOutUser = async () => {
+    if (formIoData)
+    await axios.get(`${formIoUrl}/submission/${formSubmissionId}`).then(async res => {
+      const previousData = res.data.data
+      // const key = formIoData.data.components[index].key
+      const obj: any = {};
+      obj['screenedOut'] = true;
+      axios.put(`${formIoUrl}/submission/${formSubmissionId}`, {
+        data: {
+          ...previousData,
+          ...obj,
+        }
+      }).catch((error) => console.error(error))
+
+    })
+  }
+
+  const savePath = async (pathValue: string) => {
+    if (formIoData)
+      await axios.get(`${formIoUrl}/submission/${formSubmissionId}`).then(async res => {
+        const previousData = res.data.data
+        // const key = formIoData.data.components[index].key
+        const obj: any = {};
+        obj['path'] = pathValue;
+        axios.put(`${formIoUrl}/submission/${formSubmissionId}`, {
+          data: {
+            ...previousData,
+            ...obj,
+          }
+        }).catch((error) => console.error(error))
+    })
+  }
+console.log('path here', path)
   const submitData = async (message: string, index: number, endResponses?: string[], pResponses?: ResolvePaths[]) => {
     if (formIoData) {
       let surveyResponses: string[] = []
@@ -483,9 +531,9 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
             })
           } else {
             obj[key] = message
-            if (path && path !== "") {
-              obj['path'] = path
-            }
+            // if (path && path !== "") {
+            //   obj['path'] = path
+            // }
 
             if (
               formIoData.data.components[index].tags && 
@@ -508,6 +556,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
                 let number = Number(message)
                 if (rangeStart !== undefined && rangeEnd !== undefined) {
                   if (number < rangeStart || number > rangeEnd) {
+                    screenOutUser()
                     setIndex(1000)
                     return
                   }
@@ -530,6 +579,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
                   }
                   if (p && p.value) {
                     setPath(p.value.replace('[', '').replace(']', ''))
+                    savePath(p.value.replace('[', '').replace(']', ''))
                     if (path !== '' && path !== p?.value.replace('[', '').replace(']', '')) { //Ensure that the user is still on the same path through every path question
                       setPathChanged(true)
                       newPathChange = true
@@ -547,19 +597,31 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           
               if (endSurveyResponses.includes(message) || endResponses?.includes(message) || endResponses?.find(e => message.includes(e)) || endSurveyResponses?.find(e => message.includes(e))) {
                 setIndex(1000)
+                screenOutUser()
                 toggleInputDisabled(true)
               } else if (message.includes('invalidUrl')) {
+                screenOutUser()
                 setIndex(1000)
                 toggleInputDisabled(true)
               } else if (surveyResponses.length > 0 && !surveyResponses.every(r => r === surveyResponses[0])) {
+                screenOutUser()
                 setIndex(1000)
               } else if (
                 otherReponses.find(o => endSurveyResponses.map(e => e.trim() === o.trim())) && 
                 !formIoData.data.components[index]?.data?.values.find(v => v?.value === message)
               ) {
+                screenOutUser()
                 setIndex(1000)
               } else if (path && resolvePaths && resolvePaths.length > 0) { //  End study if a specific path is required to continue
-                if (!resolvePaths.find(r => r.label.trim() === message.trim())?.value.includes(path) && pathChanged === false && newPathChange === false) {
+                console.log('resolvePath check', !resolvePaths.find(r => r.label.trim() === message.trim())?.value.includes(path))
+                console.log('path changed', pathChanged)
+                console.log('new path change', newPathChange)
+                if (
+                  !resolvePaths.find(r => r.label.trim() === message.trim())?.value.includes(path) &&
+                  pathChanged === false &&
+                  newPathChange === false
+                ) {
+                  screenOutUser()
                   setIndex(1000)
                   toggleInputDisabled(true)
                   setResolvePaths([])
@@ -692,6 +754,10 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
         await submitData(" ", index)
         return
       } else if (formIoData.data.components[index].label.includes('MediaOrder')) {
+        setSubmit(true)
+        await submitData(" ", index)
+        return
+      } else if (formIoData.data.components[index].label.includes('ScreenedOut')) {
         setSubmit(true)
         await submitData(" ", index)
         return
