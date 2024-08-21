@@ -107,6 +107,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
   const [resolvePaths, setResolvePaths] = useState<ResolvePaths[]>([])
   const [pathChanged, setPathChanged] = useState(false)
   const [imageOrder, setImageOrder] = useState('')
+  const [usedRandomImages, setUsedRandomImages] = useState<string[]>([])
 
 
   const setCookie = (cname: string, exdays: number, cvalue?: string) => {
@@ -233,7 +234,9 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           components[i].type === 'hidden' ||
           components[i].label === 'Path' ||
           components[i].label.includes('MediaOrder') ||
-          components[i].label === 'ScreenOutuser'
+          components[i].label === 'ScreenOutuser' ||
+          components[i].label === 'ScreenedOut' ||
+          components[i].label === 'RandomImagePerQuestion'
         ) {
           if (components[i].label === 'Path') {
             setPath(responses[i][1])
@@ -249,13 +252,13 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
         } else {
           addResponseMessage(components[i].label)
           if (components[i].tags && components[i].tags.length > 0 && components[i].tags.includes('images')) {
-            const images = components[i].properties.images.split(',')
-            const shouldRandomize = components[i].properties.shouldRandomize.toString() === '1'
+            const images = components[i].properties.images?.split(',')
+            const shouldRandomize = components[i].properties.shouldRandomize?.toString() === '1'
             renderCustomComponent(ImageRenderer, {images, shouldRandomize, updateImageOrder}, false)
           }
           if (components[i].tags && components[i].tags.length > 0 && components[i].tags.includes('videos')) {
-            const videos = components[i].properties.videos.split(',')
-            const shouldRandomize = components[i].properties.shouldRandomize.toString() === '1'
+            const videos = components[i].properties.videos?.split(',')
+            const shouldRandomize = components[i].properties.shouldRandomize?.toString() === '1'
             renderCustomComponent(VideoRenderer, {videos, shouldRandomize, updateImageOrder}, false)
           }
           let userMessage = responses[i][1]
@@ -418,7 +421,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
         }).catch((error) => console.error(error))
     })
   }
-console.log('path here', path)
+
   const submitData = async (message: string, index: number, endResponses?: string[], pResponses?: ResolvePaths[]) => {
     if (formIoData) {
       let surveyResponses: string[] = []
@@ -544,6 +547,15 @@ console.log('path here', path)
               obj[`mediaOrder${key.trim()}`] = imageOrder
             }
 
+            if (
+              formIoData.data.components[index].tags && 
+              formIoData.data.components[index].tags.length > 0 && 
+              (formIoData.data.components[index].tags.includes('images') ||
+                formIoData.data.components[index].tags.includes('videos'))
+            ) {
+              obj[`randomImagePerQuestion`] = usedRandomImages.join(',')
+            }
+
             axios.put(`${formIoUrl}/submission/${formSubmissionId}`, {
               data: {
                 ...previousData,
@@ -571,7 +583,7 @@ console.log('path here', path)
                   (pResponses && pResponses.filter(p => p.label.trim() === message.trim())))
                   &&
                   !(endSurveyResponses.includes(message) ||
-                  endResponses?.includes(message))) 
+                  endResponses?.includes(message)))
               {
                   let p = pathResponses.find(p => p.label.trim().includes(message.trim())) //?.value.replace('[', '').replace(']', '')
                   if (p === undefined && pResponses) {
@@ -613,9 +625,6 @@ console.log('path here', path)
                 screenOutUser()
                 setIndex(1000)
               } else if (path && resolvePaths && resolvePaths.length > 0) { //  End study if a specific path is required to continue
-                console.log('resolvePath check', !resolvePaths.find(r => r.label.trim() === message.trim())?.value.includes(path))
-                console.log('path changed', pathChanged)
-                console.log('new path change', newPathChange)
                 if (
                   !resolvePaths.find(r => r.label.trim() === message.trim())?.value.includes(path) &&
                   pathChanged === false &&
@@ -757,6 +766,10 @@ console.log('path here', path)
         setSubmit(true)
         await submitData(" ", index)
         return
+      } else if (formIoData.data.components[index].label.includes('RandomImagePerQuestion')) {
+        setSubmit(true)
+        await submitData(" ", index)
+        return
       } else if (formIoData.data.components[index].label.includes('ScreenedOut')) {
         setSubmit(true)
         await submitData(" ", index)
@@ -867,7 +880,19 @@ console.log('path here', path)
 
         if (formIoData.data.components[index].tags && formIoData.data.components[index].tags.length > 0 && formIoData.data.components[index].tags.includes('images')) {
           let images = formIoData.data.components[index].properties.images.split(',')
-          let shouldRandomize = currentIndex.properties.shouldRandomize.toString() === '1'
+          let shouldRandomize = currentIndex.properties.shouldRandomize?.toString() === '1'
+          let selectRandom = currentIndex.properties.selectRandom?.toString() === '1'
+          if (selectRandom) {
+            let unusedImages = []
+            for (let i=0;i<images.length;i++) {
+              if (!usedRandomImages.includes(images[i])) {
+                unusedImages.push(images[i])
+              }
+            }
+            const randomImage = unusedImages[Math.floor(Math.random() * unusedImages.length)]
+            images = [randomImage]
+            setUsedRandomImages((previous) => [...previous, randomImage])
+          }
           setTimeout(() => {
             renderCustomComponent(ImageRenderer, {images, shouldRandomize, updateImageOrder}, false)
           }, typingTime + 10)
@@ -875,7 +900,7 @@ console.log('path here', path)
 
         if (formIoData.data.components[index].tags && formIoData.data.components[index].tags.length > 0 && formIoData.data.components[index].tags.includes('videos')) {
           let videos = formIoData.data.components[index].properties.videos.split(',')
-          const videoShouldRandomize = formIoData.data.components[index].properties.shouldRandomize.toString() === '1'
+          const videoShouldRandomize = formIoData.data.components[index].properties.shouldRandomize?.toString() === '1'
           setTimeout(() => {
             renderCustomComponent(VideoRenderer, {videos, videoShouldRandomize, updateImageOrder}, false)
           }, typingTime + 10)

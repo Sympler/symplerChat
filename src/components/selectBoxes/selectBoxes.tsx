@@ -15,6 +15,7 @@ export interface Slider {
 const SelectBoxes = ({labels, confirmValue}: Slider) => {
     const [values, setValues] = useState<string[]>([]);
     const [showContents, setShowContents] = useState(true);
+    const [otherValue, setOtherValue] = useState("")
     const isMobile = window.innerWidth <= 720;
     const exclusiveBoxes = labels.filter(l => l.exclusive === 'Z')
 
@@ -42,7 +43,7 @@ const SelectBoxes = ({labels, confirmValue}: Slider) => {
 
     const confirm = () => {
         setShowContents(false);
-        confirmValue(values.toString().replace('[', '').replace(']', '').replaceAll(',', ', ')); 
+        confirmValue(values.toString().replace('[', '').replace(']', '').replaceAll(',', ', ') + (values.length > 0 ? ', ' : '') + otherValue); 
     }
 
     return (
@@ -51,22 +52,37 @@ const SelectBoxes = ({labels, confirmValue}: Slider) => {
                 <div style={{display: 'flex', flexDirection: 'column', marginLeft: 'auto', paddingRight: '15px' }}>
                     {labels.map((l, key) => (
                         <div key={key} style={isMobile ? {marginBottom: '20px'} : {marginBottom: '10px'}}>
-                            <input 
-                                checked={values.includes(l.label)}
-                                id={l.value} 
-                                type={'checkbox'}
-                                style={{
-                                    cursor: 'pointer'
-                                }}
-                                onChange={() => updateValue(l.label, l.exclusive)}
-                                value={l.label}
-                                name={l.label}
-                            />
-                            <label htmlFor={l.label}>{l.label}</label>
+                            {l.value === "OTHER" ?
+                                <input 
+                                    checked={values.includes(l.label)}
+                                    id={l.value} 
+                                    type={'text'}
+                                    style={{
+                                        cursor: 'pointer'
+                                    }}
+                                    onChange={(e) => setOtherValue(e.target.value)}
+                                    placeholder={l.label}
+                                    name={l.label}
+                                />
+                            : <>
+                                <input 
+                                    checked={values.includes(l.label)}
+                                    id={l.value} 
+                                    type={'checkbox'}
+                                    style={{
+                                        cursor: 'pointer'
+                                    }}
+                                    onChange={() => updateValue(l.label, l.exclusive)}
+                                    value={l.label}
+                                    name={l.label}
+                                />
+                                <label htmlFor={l.label}>{l.label}</label>
+                            </>
+                            }
                         </div>
                     ))}
                      <div style={{marginLeft: 'auto'}}>
-                        <button id="slider-button" disabled={values.length > 0 ? false : true} style={values.length > 0 ? undefined : {backgroundColor: "#f4f7f9", borderColor: '#f4f7f9 !important', cursor: 'not-allowed'}} onClick={() => confirm()}>OK</button>
+                        <button id="slider-button" disabled={(values.length > 0 || otherValue !== "") ? false : true} style={(values.length > 0 || otherValue !== "") ? undefined : {backgroundColor: "#f4f7f9", borderColor: '#f4f7f9 !important', cursor: 'not-allowed'}} onClick={() => confirm()}>OK</button>
                     </div>
                 </div>
             : null}
