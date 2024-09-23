@@ -696,6 +696,10 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
         } else {
           link = formIoData.data.components[index].defaultValue?.replace('id=1234', `id=${formSubmissionId}` )
         }
+        const name = uidName ?? 'uid';
+        if (uuid) {
+          link = formIoData.data.components[index].defaultValue.replace(`${name}=1234`, `${name}=${uuid}`).replace('campaign=1234', `campaign=${formIoData.data.title}`).replace(/ /g,"-");
+        }
         setRejectionLink(link)
         await submitData(formIoData.data.components[index].defaultValue, index)
         return
