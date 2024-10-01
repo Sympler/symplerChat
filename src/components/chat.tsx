@@ -607,7 +607,25 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
                   }
               }
           
-              if (endSurveyResponses.includes(message) || endResponses?.includes(message) || endResponses?.find(e => message.includes(e)) || endSurveyResponses?.find(e => message.includes(e))) {
+              const answers = message.split(',').map(m => m.trim()).filter(m => m !== '')
+
+              let screenOut = false
+              let endSurveyAnswers = []
+              if ((endResponses && endResponses.length > 0 && endResponses.every(response => response !== '')) || (endSurveyResponses && endSurveyResponses.length > 0 && endSurveyResponses.every(response => response !== ''))) {
+                for (const answer of answers) {
+                  if (endSurveyResponses.includes(answer) || endResponses?.includes(answer)) {
+                    screenOut = true
+                    endSurveyAnswers.push(answer)
+                  }
+                }
+              }
+
+              if (screenOut && answers.length > endSurveyResponses.length) {
+                // Cancel the screening if the user has selected at least one response that doesn't end the survey
+                screenOut = false
+              }
+
+              if (screenOut) {
                 setIndex(1000)
                 screenOutUser()
                 toggleInputDisabled(true)
