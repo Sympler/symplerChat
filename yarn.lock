@@ -6028,6 +6028,11 @@ markdown-it-sup@^1.0.0:
   resolved "https://registry.npmjs.org/markdown-it-sup/-/markdown-it-sup-1.0.0.tgz"
   integrity sha512-E32m0nV9iyhRR7CrhnzL5msqic7rL1juWre6TQNxsnApg7Uf+F97JOKxUijg5YwXz86lZ0mqfOnutoryyNdntQ==
 
+markdown-it-underline@^1.0.1:
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/markdown-it-underline/-/markdown-it-underline-1.0.1.tgz#43a54a541d95d739b43157701f1da306d7c300b2"
+  integrity sha512-J597ni39vPHIH1ONVZoDvQKUUXkOqoB93bm6Fc/5Deu6XaWMXrT0xf2m2r9qZCA8dncWJ5V8d5PyGkpmQuy/vg==
+
 markdown-it@^8.4.1:
   version "8.4.2"
   resolved "https://registry.npmjs.org/markdown-it/-/markdown-it-8.4.2.tgz"
@@ -7313,10 +7318,10 @@ react-app-polyfill@^3.0.0:
     regenerator-runtime "^0.13.9"
     whatwg-fetch "^3.6.2"
 
-react-chat-widget-custom@^1.0.44:
-  version "1.0.44"
-  resolved "https://registry.yarnpkg.com/react-chat-widget-custom/-/react-chat-widget-custom-1.0.44.tgz#bc3f9d0a6a74e8bb3918b4be0331e212a20d971f"
-  integrity sha512-dJL4JimERvU6rysqVKTMtZAedTqxsf57kTZJ22fxEkYPGAuqny1B0eXb2QZjtKKLga0zYwkYTcBkGW+6+9y2aA==
+react-chat-widget-custom@^1.0.45:
+  version "1.0.45"
+  resolved "https://registry.yarnpkg.com/react-chat-widget-custom/-/react-chat-widget-custom-1.0.45.tgz#02495a953972a1902eddad4290833d9f054cba66"
+  integrity sha512-leQv1K+KwRBFxk8RDR5rWkqmK1m4LCP2oARhRyeDjFxvwM8OfwH726XhSZ7vRyAMfGQXTggg5dAMcZ/eeUaSVA==
   dependencies:
     classnames "^2.2.6"
     date-fns "^2.11.1"
@@ -7326,6 +7331,7 @@ react-chat-widget-custom@^1.0.44:
     markdown-it-link-attributes "^2.1.0"
     markdown-it-sanitizer "^0.4.3"
     markdown-it-sup "^1.0.0"
+    markdown-it-underline "^1.0.1"
     react-hot-toast "^2.4.1"
     react-modal "^3.16.1"
     react-record-webcam "^0.0.18"
