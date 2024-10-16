@@ -131,7 +131,8 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
       } else if (formIoData.data.tags.includes('korean')) { 
         return `본 설문조사에 참여해 주셔서 대단히 감사합니다! 현재로서는 더 이상 질문이 없지만 향후 다른 프로젝트에서 다시 이야기할 수 있기를 바랍니다 : `
       } else if (formIoData.data.tags.includes('german')) {
-        return `Vielen Dank für Ihr Interesse an dieser Umfrage! Wir haben zu diesem Zeitpunkt keine weiteren Fragen an Sie, aber wir hoffen, bei einem zukünftigen Projekt wieder mit Ihnen sprechen zu können : ` 
+        // return `Vielen Dank für Ihr Interesse an dieser Umfrage! Wir haben zu diesem Zeitpunkt keine weiteren Fragen an Sie, aber wir hoffen, bei einem zukünftigen Projekt wieder mit Ihnen sprechen zu können : ` 
+        return `Danke für die Antwort. Wir haben zu diesem Zeitpunkt keine weiteren Fragen an Sie. Sie können dieses Fenster jetzt schließen.`
       } else {
         return `Okay, thanks so much! We don't have any other questions for you at this time, but we hope to talk to you in another study soon. Have a great day!`
       }
