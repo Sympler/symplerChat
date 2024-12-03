@@ -689,6 +689,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
 
   const askQuestion = async (message?: string, ) => {
     if (formIoData) {
+
       setOtherResponses([''])
       //setEndSurveyResponses(['']) // Clear out end responses in case questions have duplicate labels
       const currentIndex = formIoData.data.components[index]
@@ -908,7 +909,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
 
         }
 
-        if (formIoData.data.components[index].tags && formIoData.data.components[index].tags.length > 0 && formIoData.data.components[index].tags.includes('images')) {
+        if (formIoData?.data?.components[index]?.tags && formIoData.data.components[index].tags.length > 0 && formIoData.data.components[index].tags.includes('images')) {
           let images = formIoData.data.components[index].properties.images.split(',')
           let shouldRandomize = currentIndex.properties.shouldRandomize?.toString() === '1'
           let selectRandom = currentIndex.properties.selectRandom?.toString() === '1'
@@ -928,7 +929,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           }, typingTime + 10)
         }
 
-        if (formIoData.data.components[index].tags && formIoData.data.components[index].tags.length > 0 && formIoData.data.components[index].tags.includes('videos')) {
+        if (formIoData?.data?.components[index]?.tags && formIoData.data.components[index].tags.length > 0 && formIoData.data.components[index].tags.includes('videos')) {
           let videos = formIoData.data.components[index].properties.videos.split(',')
           const videoShouldRandomize = formIoData.data.components[index].properties.shouldRandomize?.toString() === '1'
           setTimeout(() => {
@@ -936,7 +937,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           }, typingTime + 10)
         }
 
-        if (formIoData.data.components[index].type === "selectboxes") {
+        if (formIoData?.data?.components[index]?.type === "selectboxes") {
           const originalObject = JSON.parse(JSON.stringify(formIoData)) as FormIoResponse
           const pResponses = originalObject?.data.components[index]?.values.filter(v => v.value.includes('[PATH_')).map(p => {
             return {value: p.value.trim(), label: p.label.trim()}
@@ -965,7 +966,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
             renderCustomComponent(SelectBoxes, {labels: labels, confirmValue: selectBoxesResponse}, false);
           }, typingTime + 10)
         }
-        if (formIoData.data.components[index].type === 'dropdown') {
+        if (formIoData?.data?.components[index]?.type === 'dropdown') {
           let labels = formIoData.data.components[index].values
 
           const dropdownResponse = async (value: string) => {
@@ -978,7 +979,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
             renderCustomComponent(Dropdown, {labels: labels, confirmValue: dropdownResponse}, false);
           }, typingTime + 10)
         }
-        if(formIoData.data.components[index].type === 'radio') {
+        if(formIoData?.data?.components[index]?.type === 'radio') {
           let labels = formIoData.data.components[index].values
           const sliderResponse = async (value: string) => {
             addUserMessage(value)
@@ -990,7 +991,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
             renderCustomComponent(SliderInput, {min: 0, max: labels.length - 1, labels: labels, confirmValue: sliderResponse}, false);
           }, typingTime - 10)
         }
-        if (formIoData.data.components[index].type === 'select') {
+        if (formIoData?.data?.components[index]?.type === 'select') {
           toggleInputDisabled(true);
           const originalObject = JSON.parse(JSON.stringify(formIoData)) as FormIoResponse
           const pResponses = originalObject?.data.components[index].data.values.filter(v => v.value.includes('[PATH_')).map(p => {
