@@ -1,5 +1,5 @@
 import React, {useEffect, useMemo, useState} from 'react';
-import {Widget, addResponseMessage, setQuickButtons, addUserMessage, toggleWidget, toggleMsgLoader, addLinkSnippet, renderCustomComponent, toggleInputDisabled} from 'react-chat-widget-custom';
+import {Widget, addResponseMessage, setQuickButtons, addUserMessage, toggleWidget, toggleMsgLoader, addLinkSnippet, renderCustomComponent, toggleInputDisabled, toggleForcedScreenRecorder} from 'react-chat-widget-custom';
 import 'react-chat-widget-custom/lib/styles.css';
 import axios from 'axios';
 import SliderInput from './slider/slider';
@@ -54,6 +54,7 @@ interface FormIoResponse {
 }
 
 interface ChatProps {
+  jsonData?: any
   formName?: string,
   endpoint?: string
   shouldRedeem?: string | null,
@@ -73,7 +74,7 @@ interface ResolvePaths {
 }
 
 
-const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uuid, uidName, urlParams, urlFormSubmissionId}) => {
+const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uuid, uidName, urlParams, urlFormSubmissionId, jsonData}) => {
   const [formIoData, setFormIoData] = useState<FormIoResponse>()
   const [sessionStarted, setSessionStarted] = useState(false);
   const [submit, setSubmit] = useState(false);
@@ -109,6 +110,15 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
   const [imageOrder, setImageOrder] = useState('')
   const [usedRandomImages, setUsedRandomImages] = useState<string[]>([])
 
+  useEffect(() => {
+    if (jsonData) {
+      const formattedData = Object.keys(jsonData).map(key => ({
+        key: key,
+        value: jsonData[key]
+      }));
+      setFormVariables([...formVariables, ...formattedData]);
+    }
+  }, [jsonData]);
 
   const setCookie = (cname: string, exdays: number, cvalue?: string) => {
     const d = new Date();
@@ -225,6 +235,9 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
 
   const addChatHistory = (responses: any, index: number) => {
     const components = formIoData?.data.components ?? []
+
+    console.log(`components: `, components);
+
     for(let i=0; i<index; i++) {
       if (components[i].label !== undefined) {
         if (components[i].label === 'GetTimeZone' ||
@@ -425,6 +438,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
 
   const submitData = async (message: string, index: number, endResponses?: string[], pResponses?: ResolvePaths[]) => {
     if (formIoData) {
+      toggleForcedScreenRecorder(false)
       let surveyResponses: string[] = []
       if (surveyBlock || screenerBlockEnd) {
         setSurveyBlockResponses([...surveyBlockResponses, message.trim()[0]]) //This code expects the quick reply message to either be a letter or be prefixed by a letter e.g. A. option1, B. option2
@@ -689,48 +703,72 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
 
   const askQuestion = async (message?: string, ) => {
     if (formIoData) {
-
       setOtherResponses([''])
-      //setEndSurveyResponses(['']) // Clear out end responses in case questions have duplicate labels
-      const currentIndex = formIoData.data.components[index]
+
+      const formData = {...formIoData};
+      
+      const currentIndex = formData.data.components[index];
+
+
+      // Logic for disabling the bot based on the disableBot property in the form question's custom properties
+      // It can look for disableBot = true or check a condition from the form variables passed in through the JSON data
+      if (currentIndex?.properties?.hasOwnProperty('disableBot')) {
+        if (currentIndex?.properties?.disableBot === 'true') {
+          console.log(`has disableBot`);
+          return;
+        } else if (currentIndex?.properties?.disableBot.includes('condition')) {
+          const split1 = currentIndex?.properties?.disableBot.split('condition | ')[1];
+          if (split1 && split1.length > 1) {
+            const property = split1.split('=')[0];
+            const value = split1.split('=')[1];
+            if (formVariables.find(v => v.key === property && v.value === value)) {
+              console.log(`has disableBot from condition`)
+              return;
+            }
+          }
+        }
+      }
+      
       toggleInputDisabled(false)
-      if (index >= formIoData?.data.components.length - 1) {
+      // toggleForcedScreenRecorder(false)
+
+      if (index >= formData?.data.components.length - 1) {
         toggleInputDisabled(true);
         if (index !== 1001) {
           setCookie(`SESSIONFORM${formName}`, 365, formName)
           // @ts-ignore
-          window.gtag("event", `${formIoData.data.title} Form Completed`, {
+          window.gtag("event", `${formData.data.title} Form Completed`, {
             event_category: "Form",
-            event_label: formIoData.data.title
+            event_label: formData.data.title
           });
         }
-      } else if (formIoData.data.components[index].label.includes('GetTimeZone')) {
+      } else if (formData.data.components[index].label.includes('GetTimeZone')) {
         setSubmit(true)
         let timezone = newDate.slice(newDate.indexOf('('), newDate.lastIndexOf(')') + 1)
         await submitData(timezone.replace('(', '').replace(')', ''), index)
         return
-      } else if (formIoData.data.components[index].label.includes('RejectionLink')) {
+      } else if (formData.data.components[index].label.includes('RejectionLink')) {
         setSubmit(true)
         let link = ""
         if (urlParams && Object.keys(JSON.parse(urlParams)).length > 2) {
           // For swagbucks code
           let keys = Object.keys(JSON.parse(urlParams ? urlParams : ''));
-          if (formIoData.data.components[index].defaultValue) {
+          if (formData.data.components[index].defaultValue) {
             let key = keys.indexOf('transaction_id')
             let value = Object.values(JSON.parse(urlParams ? urlParams : ''))[key] as string
-            link = formIoData.data.components[index].defaultValue?.replace('id=1234', `id=${value}` )
+            link = formData.data.components[index].defaultValue?.replace('id=1234', `id=${value}` )
           }
         } else {
-          link = formIoData.data.components[index].defaultValue?.replace('id=1234', `id=${formSubmissionId}` )
+          link = formData.data.components[index].defaultValue?.replace('id=1234', `id=${formSubmissionId}` )
         }
         const name = uidName ?? 'uid';
         if (uuid) {
-          link = formIoData.data.components[index].defaultValue.replace(`${name}=1234`, `${name}=${uuid}`).replace('campaign=1234', `campaign=${formIoData.data.title}`).replace(/ /g,"-");
+          link = formData.data.components[index].defaultValue.replace(`${name}=1234`, `${name}=${uuid}`).replace('campaign=1234', `campaign=${formData.data.title}`).replace(/ /g,"-");
         }
         setRejectionLink(link)
-        await submitData(formIoData.data.components[index].defaultValue, index)
+        await submitData(formData.data.components[index].defaultValue, index)
         return
-      } else if (formIoData.data.components[index].label.includes('GetLocation')) {
+      } else if (formData.data.components[index].label.includes('GetLocation')) {
         setSubmit(true)
         try {
           if (!location) {
@@ -756,14 +794,14 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           return
         }
       
-      } else if (formIoData.data.components[index].label.includes('StateProvince')){
+      } else if (formData.data.components[index].label.includes('StateProvince')){
         if (!location) {
           // let l = await axios.get('https://api.ipgeolocation.io/ipgeo?apiKey=902c52a386fb4db59dd7d4c98e2dba2a')
           const l = await axios.get(`https://ipinfo.io?token=36639d7493f191`)
           setLocation(l.data)
         }
         // if (!formIoData.data.components[index].data.values.map(v => v.label.toLowerCase()).includes(location?.state_prov.toLowerCase()) ) {
-        if (!formIoData.data.components[index].data.values.map(v => v.label.toLowerCase()).includes(location?.region.toLowerCase()) ) {
+        if (!formData.data.components[index].data.values.map(v => v.label.toLowerCase()).includes(location?.region.toLowerCase()) ) {
           if (!isVpn) {
             setIndex(1000)
           }
@@ -774,7 +812,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           await submitData(location?.region, index)
           return
         }
-      } else if (formIoData.data.components[index].label.includes('RedemptionFlow')) {
+      } else if (formData.data.components[index].label.includes('RedemptionFlow')) {
         setSubmit(true)
         try {
           if(uuid == null || shouldRedeem == null || shouldRedeem === '2' || shouldRedeem === '3' || shouldRedeem !== '1') {
@@ -789,66 +827,72 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           await submitData('Error', index)
           return
         }
-      } else if (formIoData.data.components[index].label.includes('Path')) {
+      } else if (formData.data.components[index].label.includes('Path')) {
         setSubmit(true)
         await submitData(" ", index)
         return
-      } else if (formIoData.data.components[index].label.includes('MediaOrder')) {
+      } else if (formData.data.components[index].label.includes('MediaOrder')) {
         setSubmit(true)
         await submitData(" ", index)
         return
-      } else if (formIoData.data.components[index].label.includes('RandomImagePerQuestion')) {
+      } else if (formData.data.components[index].label.includes('RandomImagePerQuestion')) {
         setSubmit(true)
         await submitData(" ", index)
         return
-      } else if (formIoData.data.components[index].label.includes('ScreenedOut')) {
+      } else if (formData.data.components[index].label.includes('ScreenedOut')) {
         setSubmit(true)
         await submitData(" ", index)
         return
       } else if (urlParams && Object.keys(JSON.parse(urlParams)).length > 2){
         // Save url parameter values
         let keys = Object.keys(JSON.parse(urlParams ? urlParams : ''));
-        if (keys.includes(formIoData.data.components[index].label)) {
+        if (keys.includes(formData.data.components[index].label)) {
           setSubmit(true)
-          let key = keys.indexOf(formIoData.data.components[index].label)
+          let key = keys.indexOf(formData.data.components[index].label)
           let value = Object.values(JSON.parse(urlParams ? urlParams : ''))[key] as string
           await submitData(value.slice(0, 10000), index)
           return
-        } else if (formIoData.data.components[index].type === 'hidden') {
+        } else if (formData.data.components[index].type === 'hidden') {
           setSubmit(true)
-          await submitData(`Missing url parameter: ${formIoData.data.components[index].label}`, index)
+          await submitData(`Missing url parameter: ${formData.data.components[index].label}`, index)
           return
         }
-      } else if (formIoData.data.components[index].type === 'hidden') {
+      } else if (formData.data.components[index].type === 'hidden') {
         // Do not show hidden form fields - should only occur if a url parameter is missing fromt the url
         setSubmit(true)
-        await submitData(`Missing url parameter: ${formIoData.data.components[index].label}`, index)
+        await submitData(`Missing url parameter: ${formData.data.components[index].label}`, index)
         return
       }
       if (message && submit === false) {
         await submitData(message, index)
         // toggleInputDisabled(false)
-        if (formIoData.data.components[index].data && Object.keys(formIoData.data.components[index].data).length > 0) {
+        if (formData.data.components[index].data && Object.keys(formData.data.components[index].data).length > 0) {
           toggleInputDisabled(true);
-          setQuickButtons(formIoData.data.components[index].data.values ?? [])
+          setQuickButtons(formData.data.components[index].data.values ?? [])
         } else {
           setQuickButtons([])
         }
       } else if (index !== 1000) {
         let responseText = currentIndex?.label
-        if (formIoData.data.components[index]?.tooltip !== "" && formIoData.data.components[index]?.tooltip !== undefined) {
-          responseText = formIoData.data.components[index]?.tooltip
+
+        if (formData.data.components[index]?.properties?.requireScreenRecord === 'true') {
+          toggleForcedScreenRecorder(true);
+          responseText = formData.data.components[index].label.replaceAll('[SCREEN_RECORD]', '');
         }
-        if (formIoData.data.components[index]?.label.match(/{{(.*?)}}/g)) {
-          let matches = formIoData.data.components[index].label.match(/{{(.*?)}}/g);
+
+        if (formData.data.components[index]?.tooltip !== "" && formData.data.components[index]?.tooltip !== undefined) {
+          responseText = formData.data.components[index]?.tooltip
+        }
+        if (formData.data.components[index]?.label.match(/{{(.*?)}}/g)) {
+          let matches = formData.data.components[index].label.match(/{{(.*?)}}/g);
 
           formVariables.map(v => {
             if (matches?.includes(`{{${v.key}}}`)) {
-              responseText = formIoData.data.components[index].label.replaceAll(`{{${v.key}}}`, v.value)
+              responseText = formData.data.components[index].label.replaceAll(`{{${v.key}}}`, v.value)
             }
           })
         }
-        if (formIoData.data.components[index]?.disabled === true) {
+        if (formData.data.components[index]?.disabled === true) {
           toggleInputDisabled(true)
         }
         let typingTime = 1000 + responseText?.length;
@@ -858,7 +902,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           typingTime = 3000 + responseText?.length;
         }
         
-        if (formIoData.data.components[index]?.tags && formIoData.data.components[index]?.tags.length > 0 && formIoData.data.components[index]?.tags.includes('numeric') && !isNumeric) {
+        if (formData.data.components[index]?.tags && formData.data.components[index]?.tags.length > 0 && formData.data.components[index]?.tags.includes('numeric') && !isNumeric) {
           setIsNumeric(true)
         } else {
           setIsNumeric(false)
@@ -872,23 +916,23 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           }
           toggleMsgLoader()
         }, typingTime)
-        if(formIoData.data.components[index]?.placeholder !== '' && formIoData.data.components[index]?.placeholder !== undefined && shouldSendRedemptionLink) {
+        if(formData.data.components[index]?.placeholder !== '' && formData.data.components[index]?.placeholder !== undefined && shouldSendRedemptionLink) {
           const name = uidName ?? 'uid';
           let redemptionLink: string | undefined;
           if (uuid) {
-            redemptionLink = formIoData.data.components[index].placeholder.replace(`${name}=1234`, `${name}=${uuid}`).replace('campaign=1234', `campaign=${formIoData.data.title}`).replace(/ /g,"-");
-          } else if (formIoData.data.components[index].placeholder.includes('transaction_id')) {
+            redemptionLink = formData.data.components[index].placeholder.replace(`${name}=1234`, `${name}=${uuid}`).replace('campaign=1234', `campaign=${formData.data.title}`).replace(/ /g,"-");
+          } else if (formData.data.components[index].placeholder.includes('transaction_id')) {
             //////////////// For swagbucks code
             if (urlParams && Object.keys(JSON.parse(urlParams)).length > 2) {
               let keys = Object.keys(JSON.parse(urlParams ? urlParams : ''));
               let key = keys.indexOf('transaction_id')
               let value = Object.values(JSON.parse(urlParams ? urlParams : ''))[key] as string
-              redemptionLink = formIoData.data.components[index].placeholder.replace(`id=1234`, `id=${value}`);
+              redemptionLink = formData.data.components[index].placeholder.replace(`id=1234`, `id=${value}`);
             } else {
-              redemptionLink = formIoData.data.components[index].placeholder.replace(`id=1234`, `id=${formSubmissionId}`);
+              redemptionLink = formData.data.components[index].placeholder.replace(`id=1234`, `id=${formSubmissionId}`);
             }
           } else {
-            redemptionLink = formIoData.data.components[index].placeholder.replace(`${name}=1234`, `${name}=${formSubmissionId}`).replace('campaign=1234', `campaign=${formIoData.data.title}`).replace(/ /g,"-");
+            redemptionLink = formData.data.components[index].placeholder.replace(`${name}=1234`, `${name}=${formSubmissionId}`).replace('campaign=1234', `campaign=${formIoData.data.title}`).replace(/ /g,"-");
           }
 
           // if (uuid && shouldRedeem && shouldRedeem !== '2' && shouldRedeem !== '3' && shouldRedeem === '1'){
@@ -909,8 +953,8 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
 
         }
 
-        if (formIoData?.data?.components[index]?.tags && formIoData.data.components[index].tags.length > 0 && formIoData.data.components[index].tags.includes('images')) {
-          let images = formIoData.data.components[index].properties.images.split(',')
+        if (formData?.data?.components[index]?.tags && formData.data.components[index].tags.length > 0 && formData.data.components[index].tags.includes('images')) {
+          let images = formData.data.components[index].properties.images.split(',')
           let shouldRandomize = currentIndex.properties.shouldRandomize?.toString() === '1'
           let selectRandom = currentIndex.properties.selectRandom?.toString() === '1'
           if (selectRandom) {
@@ -929,16 +973,16 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           }, typingTime + 10)
         }
 
-        if (formIoData?.data?.components[index]?.tags && formIoData.data.components[index].tags.length > 0 && formIoData.data.components[index].tags.includes('videos')) {
-          let videos = formIoData.data.components[index].properties.videos.split(',')
-          const videoShouldRandomize = formIoData.data.components[index].properties.shouldRandomize?.toString() === '1'
+        if (formData?.data?.components[index]?.tags && formData.data.components[index].tags.length > 0 && formData.data.components[index].tags.includes('videos')) {
+          let videos = formData.data.components[index].properties.videos.split(',')
+          const videoShouldRandomize = formData.data.components[index].properties.shouldRandomize?.toString() === '1'
           setTimeout(() => {
             renderCustomComponent(VideoRenderer, {videos, videoShouldRandomize, updateImageOrder}, false)
           }, typingTime + 10)
         }
 
-        if (formIoData?.data?.components[index]?.type === "selectboxes") {
-          const originalObject = JSON.parse(JSON.stringify(formIoData)) as FormIoResponse
+        if (formData?.data?.components[index]?.type === "selectboxes") {
+          const originalObject = JSON.parse(JSON.stringify(formData)) as FormIoResponse
           const pResponses = originalObject?.data.components[index]?.values.filter(v => v.value.includes('[PATH_')).map(p => {
             return {value: p.value.trim(), label: p.label.trim()}
           })
@@ -952,7 +996,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           // setResolvePaths([...resolvePaths, ...rPaths])
 
 
-          let labels = formIoData.data.components[index].values
+          let labels = formData.data.components[index].values
           const endResponses = labels.filter(v => v.value.includes('END_SURVEY') ? v : null).map(v => v.label)
           // setEndSurveyResponses(labels.filter(v => v.value.includes('END_SURVEY') ? v : null).map(v => v.label))
 
@@ -966,8 +1010,8 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
             renderCustomComponent(SelectBoxes, {labels: labels, confirmValue: selectBoxesResponse}, false);
           }, typingTime + 10)
         }
-        if (formIoData?.data?.components[index]?.type === 'dropdown') {
-          let labels = formIoData.data.components[index].values
+        if (formData?.data?.components[index]?.type === 'dropdown') {
+          let labels = formData.data.components[index].values
 
           const dropdownResponse = async (value: string) => {
             addUserMessage(value)
@@ -979,8 +1023,8 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
             renderCustomComponent(Dropdown, {labels: labels, confirmValue: dropdownResponse}, false);
           }, typingTime + 10)
         }
-        if(formIoData?.data?.components[index]?.type === 'radio') {
-          let labels = formIoData.data.components[index].values
+        if(formData?.data?.components[index]?.type === 'radio') {
+          let labels = formData.data.components[index].values
           const sliderResponse = async (value: string) => {
             addUserMessage(value)
             // toggleInputDisabled(false);
@@ -991,9 +1035,9 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
             renderCustomComponent(SliderInput, {min: 0, max: labels.length - 1, labels: labels, confirmValue: sliderResponse}, false);
           }, typingTime - 10)
         }
-        if (formIoData?.data?.components[index]?.type === 'select') {
+        if (formData?.data?.components[index]?.type === 'select') {
           toggleInputDisabled(true);
-          const originalObject = JSON.parse(JSON.stringify(formIoData)) as FormIoResponse
+          const originalObject = JSON.parse(JSON.stringify(formData)) as FormIoResponse
           const pResponses = originalObject?.data.components[index].data.values.filter(v => v.value.includes('[PATH_')).map(p => {
             return {value: p.value.trim(), label: p.label.trim()}
           })
@@ -1006,15 +1050,15 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           setOtherResponses(originalObject.data.components[index].data.values?.filter(v => v.value.includes('OTHER') ? v : null).map(v => v.label))
 
 
-          if (formIoData.data.components[index].data?.values?.filter(v => v.value.includes('SCREENER_BLOCK_START')).length > 0) {
+          if (formData.data.components[index].data?.values?.filter(v => v.value.includes('SCREENER_BLOCK_START')).length > 0) {
             setSurveyBlock(true)
-          } else if (formIoData.data.components[index].data?.values?.filter(v => v.value.includes('SCREENER_BLOCK_END')).length > 0) {
+          } else if (formData.data.components[index].data?.values?.filter(v => v.value.includes('SCREENER_BLOCK_END')).length > 0) {
             setSurveyBlock(false)
             setScreenerBlockEnd(true)
           }
-          formIoData.data.components[index].data.values?.map(v => v.value = v.label)
+          formData.data.components[index].data.values?.map(v => v.value = v.label)
           setTimeout(() => {
-            setQuickButtons(formIoData.data.components[index].data.values ?? [])
+            setQuickButtons(formData.data.components[index].data.values ?? [])
           }, typingTime - 10)
         } else {
           setQuickButtons([])

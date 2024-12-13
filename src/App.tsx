@@ -47,6 +47,7 @@ const App: React.FC<ChatProps> = () => {
 
   const [endpoint, setEndpoint] = useState<string | null>(null);
   const [formName, setFormName] = useState<string | null>(null);
+  const [jsonData, setJsonData] = useState<any | null>(null);
   const [shouldRedeem, setShouldRedeem] = useState<string | null>(null);
   const [uuid, setUuid] = useState<string | null>(null);
   const [uidName, setUidName] = useState<string | null>(null);
@@ -77,14 +78,50 @@ const App: React.FC<ChatProps> = () => {
       setEndpoint(endpoint);
       setFormName(formName);
 
+      const jsonBase64 = params.json;
+      if (jsonBase64) {
+        const decodedJson = atob(jsonBase64);
+        const parsedJson = JSON.parse(decodedJson);
+
+
+        console.log(`parsedJson: `, parsedJson);
+
+        setJsonData(parsedJson);
+        if (parsedJson?.endpoint) {
+          setEndpoint(parsedJson.endpoint);
+        }
+        if (parsedJson?.formName) {
+          setFormName(parsedJson.formName);
+        }
+        if (parsedJson?.status) {
+          setShouldRedeem(parsedJson.status);
+        }
+        if (parsedJson?.uidName) {
+          setUuid(parsedJson.uidName);
+        }
+      }
     }
   }, []);
+
+  useEffect(() => {
+    
+  }, [jsonData]);
+
 
   return (
     <div className="App">
       <NavBar />
       {endpoint && formName ?(
-        <SymplerChat endpoint={endpoint} formName={formName} shouldRedeem={shouldRedeem} uuid={uuid} uidName={uidName} urlParams={urlParams} urlFormSubmissionId={urlformSubmissionId}/>
+        <SymplerChat 
+          endpoint={endpoint} 
+          formName={formName} 
+          shouldRedeem={shouldRedeem} 
+          uuid={uuid} 
+          uidName={uidName} 
+          urlParams={urlParams} 
+          urlFormSubmissionId={urlformSubmissionId} 
+          jsonData={jsonData}
+        />
       ): null}
     </div>
   );
