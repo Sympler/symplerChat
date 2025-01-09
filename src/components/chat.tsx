@@ -7,6 +7,7 @@ import SelectBoxes from './selectBoxes/selectBoxes';
 import Dropdown from './dropdown/dropdown';
 import ImageRenderer from './imageRenderer/imageRenderer';
 import VideoRenderer from './videoRenderer/videoRenderer';
+import * as Sentry from "@sentry/react";
 
 export type TFile = {
   source?: string;
@@ -542,6 +543,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
                 setIndex(index => index + 1)
                 setSubmit(false)
               }).catch(error => {
+                Sentry.captureException(error);
                 console.error('error', error)
               })
             }).catch(error => {

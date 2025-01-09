@@ -1,7 +1,4 @@
 import React, {useEffect, useState} from 'react';
-import {Widget, addResponseMessage, setQuickButtons, addUserMessage, toggleWidget} from 'react-chat-widget-custom';
-import 'react-chat-widget-custom/lib/styles.css';
-import axios from 'axios';
 import SymplerChat from './components/chat';
 import NavBar from './components/navbar';
 
