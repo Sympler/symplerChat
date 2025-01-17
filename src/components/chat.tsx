@@ -298,16 +298,18 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           setFormSubmissionId(value)
           setSessionStarted(true)
           const getIndex = async () => {
-            await axios.get(`${formIoUrl}/submission/${value}`).then(res => {
+            try {
+              const res = await axios.get(`${formIoUrl}/submission/${value}`)
               const responses = res.data.data
               if (responses) {
                 setIndex(Object.keys(responses).length)
                 setHasLoadedUserResponses(true)
                 addChatHistory(Object.entries(responses), Object.keys(responses).length)
               }
-              
-            })
-            setInitialized(initialized => ({queryParams: initialized.queryParams, repeatRespondents: initialized.repeatRespondents, session: true, ip: initialized.ip}))
+              setInitialized(initialized => ({queryParams: initialized.queryParams, repeatRespondents: initialized.repeatRespondents, session: true, ip: initialized.ip}))
+            } catch (error) {
+              console.error(`Failed to get the submission for the checkForSession function: `, error);
+            }
           }
           if (!hasLoadedUserResponses) {
             getIndex()
@@ -318,15 +320,17 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
       setFormSubmissionId(urlFormSubmissionId)
       setSessionStarted(true)
       const getIndex = async () => {
-        await axios.get(`${formIoUrl}/submission/${urlFormSubmissionId}`).then(res => {
+        try {
+          const res = await axios.get(`${formIoUrl}/submission/${urlFormSubmissionId}`)
           const responses = res.data.data
           if (responses) {
             setIndex(Object.keys(responses).length)
             setHasLoadedUserResponses(true)
             addChatHistory(Object.entries(responses), Object.keys(responses).length)
           }
-          
-        })
+        } catch (error) {
+          console.error(`Failed to get the submission for the checkForSession function: `, error);
+        }
         setInitialized(initialized => ({queryParams: initialized.queryParams, repeatRespondents: initialized.repeatRespondents, session: true, ip: initialized.ip}))
       }
       if (!hasLoadedUserResponses) {
@@ -399,9 +403,21 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
     setImageOrder(order)
   }
 
-  function playClick() { 
-    var audio = new Audio('/click.wav');
-    audio.play();
+  function playClick() {
+    try {
+      var audio = new Audio('/click.wav');
+      var playPromise = audio.play();
+      
+      if (playPromise !== undefined) {
+        playPromise.catch(error => {
+          // Auto-play was prevented
+          // We don't need to do anything here, just catching the error silently
+          console.debug('Audio playback was prevented:', error);
+        });
+      }
+    } catch (error) {
+      console.debug('Audio playback error:', error);
+    }
   }
 
   const screenOutUser = async () => {
@@ -912,7 +928,11 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
 
         toggleMsgLoader()
         setTimeout(() => {
-          addResponseMessage(responseText)
+          if (typeof responseText !== 'string') {
+            console.warn('responseText is not a string:', responseText);
+            Sentry.captureMessage(`Invalid responseText type: ${typeof responseText}, value: ${JSON.stringify(responseText)}`);
+          }
+          addResponseMessage(String(responseText || ""))
           if (index > 1) {
             playClick()
           }
