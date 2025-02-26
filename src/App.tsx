@@ -100,11 +100,6 @@ const App: React.FC<ChatProps> = () => {
     }
   }, []);
 
-  useEffect(() => {
-    
-  }, [jsonData]);
-
-
   return (
     <div className="App">
       <NavBar />

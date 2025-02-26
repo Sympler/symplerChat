@@ -819,7 +819,8 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           setLocation(l.data)
         }
         // if (!formIoData.data.components[index].data.values.map(v => v.label.toLowerCase()).includes(location?.state_prov.toLowerCase()) ) {
-        if (!formData.data.components[index].data.values.map(v => v.label.toLowerCase()).includes(location?.region.toLowerCase()) ) {
+        if (!formIoData.data.components[index].data.values.map(v => v.label.toLowerCase()).includes(location?.region.toLowerCase())
+            && !formIoData.data.components[index].data.values.map(v => v.label.toLowerCase()).includes(location?.timezone.toLowerCase())) {
           if (!isVpn) {
             setIndex(1000)
           }
