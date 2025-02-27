@@ -145,7 +145,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
         // return `Vielen Dank für Ihr Interesse an dieser Umfrage! Wir haben zu diesem Zeitpunkt keine weiteren Fragen an Sie, aber wir hoffen, bei einem zukünftigen Projekt wieder mit Ihnen sprechen zu können : ` 
         return `Danke für die Antwort. Wir haben zu diesem Zeitpunkt keine weiteren Fragen an Sie. Sie können dieses Fenster jetzt schließen.`
       } else {
-        return `Okay, thanks so much! We don't have any other questions for you at this time, but we hope to talk to you in another study soon. Have a great day!`
+        return `Thanks so much for your interest in this survey! We don’t have any questions for you at this time, but look forward to talking to you in a different survey soon. Thanks again!`
       }
     } else {
       return `Okay, thanks so much! We don't have any other questions for you at this time, but we hope to talk to you in another study soon. Have a great day!`
@@ -774,7 +774,6 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
         }
 
         // This code deals with blocking the users if they are on a VPN and the form's properties are set to block VPN users
-        console.log(`formData.data.components[index]?.properties: `, formData.data.components[index]?.properties);
         if (formData.data.components[index]?.properties?.allowedTimzeone) {
           const timezones = formData.data.components[index]?.properties?.allowedTimzeone.split(',')
           if (timezones && timezones.length > 0) {
