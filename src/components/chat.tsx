@@ -94,7 +94,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
   const [screenerBlockEnd, setScreenerBlockEnd] = useState(false)
   const [isNumeric, setIsNumeric] = useState(false)
   // const [END_SURVEY, SET_END_SURVEY] = useState(`Okay, thanks so much! We don't have any other questions for you at this time, but we hope to talk to you in another study soon. Have a great day!`)
-  const VPN_USER = `Please disable your vpn and refresh the page to continue with the survey.`
+  const VPN_USER = `VPN: Please disable your vpn and refresh the page to continue with the survey.`
   // const formIoUrl = `https://${endpoint}.form.io/${formName}`
   const formIoUrl = `https://forms.sympler.co/${formName}`
   const [formVariables, setFormVariables] = useState<Array<formVariablesProps>>([])
@@ -345,19 +345,21 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
     try {
       // const ipResponse = await axios.get('https://api.ipgeolocation.io/ipgeo?apiKey=902c52a386fb4db59dd7d4c98e2dba2a');
       const ipResponse = await axios.get(`https://ipinfo.io?token=36639d7493f191`)
+      console.log(`ipResponse: `, ipResponse.data);
       setLocation(ipResponse.data)
       const ip = ipResponse.data.ip
       const vpnCheck = await axios.get(`https://dash-api.sympler.co/api/v1/vpncheck/${ip}`);
+      console.log(`vpnCheck: `, vpnCheck.data);
       if (vpnCheck.data.response.block === 1) {
         setIsVpn(true)
-        if (!cookiePresent) {
-          setIndex(1001)
-          toggleMsgLoader()
-          setTimeout(() => {
-            toggleMsgLoader()
-          }, 3000)
-          addResponseMessage(VPN_USER)
-        }
+        // if (!cookiePresent) {
+        //   setIndex(1001)
+        //   toggleMsgLoader()
+        //   setTimeout(() => {
+        //     toggleMsgLoader()
+        //   }, 3000)
+        //   addResponseMessage(VPN_USER)
+        // }
       }
     } catch (error) {
       console.error(error)
@@ -761,6 +763,38 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
           });
         }
       } else if (formData.data.components[index].label.includes('GetTimeZone')) {
+        // This code deals with blocking the users if they are on a VPN and the form's properties are set to block VPN users
+        const shouldBlockVPN = formData.data.components[index]?.properties?.blockVPN === 'true'
+        
+        if (shouldBlockVPN && isVpn) {
+          setSubmit(true)
+          setIndex(1000)
+          toggleInputDisabled(true)
+          return
+        }
+
+        // This code deals with blocking the users if they are on a VPN and the form's properties are set to block VPN users
+        console.log(`formData.data.components[index]?.properties: `, formData.data.components[index]?.properties);
+        if (formData.data.components[index]?.properties?.allowedTimzeone) {
+          const timezones = formData.data.components[index]?.properties?.allowedTimzeone.split(',')
+          if (timezones && timezones.length > 0) {
+            // Get the user's current timezone
+            const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            
+            // Check if the user's timezone is in the allowed list
+            const isAllowedTimezone = timezones.some(tz => 
+              userTimezone.toLowerCase().includes(tz.trim().toLowerCase())
+            );
+            
+            // If not in allowed timezone, redirect or show message
+            if (!isAllowedTimezone) {
+              setSubmit(true)
+              setIndex(1000);
+              toggleInputDisabled(true);
+              return;
+            }
+          }
+        }
         setSubmit(true)
         let timezone = newDate.slice(newDate.indexOf('('), newDate.lastIndexOf(')') + 1)
         await submitData(timezone.replace('(', '').replace(')', ''), index)
