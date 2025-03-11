@@ -33,6 +33,7 @@ const VideoRenderer = ({videos, videoShouldRandomize, updateImageOrder}: Video) 
         <>
             {sortedVideos.map((v, key)=> {
                 return (
+                    // @ts-ignore
                     <ReactPlayer key={key} url={v} controls={true} />
                 )
             })}

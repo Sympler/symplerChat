@@ -1172,6 +1172,7 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
 
   return (
     <div className="App">
+      {/* @ts-ignore */}
       <Widget
         quickButtonsInMessage={true}
         fullScreenMode={true}
