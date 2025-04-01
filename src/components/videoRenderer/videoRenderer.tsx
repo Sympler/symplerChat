@@ -34,7 +34,14 @@ const VideoRenderer = ({videos, videoShouldRandomize, updateImageOrder}: Video) 
             {sortedVideos.map((v, key)=> {
                 return (
                     // @ts-ignore
-                    <ReactPlayer key={key} url={v} controls={true} />
+                    <ReactPlayer 
+                        key={key} 
+                        url={v} 
+                        controls={true}
+                        width="35%"
+                        height="35%"
+                        style={{ aspectRatio: '16/9' }}
+                    />
                 )
             })}
         </>

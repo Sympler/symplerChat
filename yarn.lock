@@ -8198,10 +8198,10 @@ react-app-polyfill@^3.0.0:
     regenerator-runtime "^0.13.9"
     whatwg-fetch "^3.6.2"
 
-react-chat-widget-custom@^1.0.59:
-  version "1.0.59"
-  resolved "https://registry.yarnpkg.com/react-chat-widget-custom/-/react-chat-widget-custom-1.0.59.tgz#f9ba535ddaf49b02e67276b08516baad6a4caef9"
-  integrity sha512-UUvGEuNu6JNdxrkqcSpVTB1WZSCnct9xmTUh+hqIGVv3AMzQwUo30UKyWqmcnx1ZW/QzdJba7AB4aiqFJxH0NA==
+react-chat-widget-custom@^1.0.60:
+  version "1.0.60"
+  resolved "https://registry.yarnpkg.com/react-chat-widget-custom/-/react-chat-widget-custom-1.0.60.tgz#ecc4cb684ed9eb6ab306f37f145d154d6209e2e8"
+  integrity sha512-llgoiIg6Oi9iTcgjf7h21LoHsg8eHdRQRiS1X1kHV9DBzUoYiu7xxtGKHVs4huNqsFqpHgSLhRSixSfnkhbUHQ==
   dependencies:
     classnames "^2.2.6"
     date-fns "^2.11.1"
