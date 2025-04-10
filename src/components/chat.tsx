@@ -1,5 +1,5 @@
 import React, {useEffect, useMemo, useState} from 'react';
-import {Widget, addResponseMessage, setQuickButtons, addUserMessage, toggleWidget, toggleMsgLoader, addLinkSnippet, renderCustomComponent, toggleInputDisabled, toggleForcedScreenRecorder} from 'react-chat-widget-custom';
+import {Widget, addResponseMessage, setQuickButtons, addUserMessage, toggleWidget, toggleMsgLoader, addLinkSnippet, renderCustomComponent, toggleInputDisabled, toggleForcedScreenRecorder, togglePasteEnabled} from 'react-chat-widget-custom';
 import 'react-chat-widget-custom/lib/styles.css';
 import axios from 'axios';
 import SliderInput from './slider/slider';
@@ -723,13 +723,17 @@ const SymplerChat: React.FC<ChatProps> = ({formName, endpoint, shouldRedeem, uui
 
   const askQuestion = async (message?: string, ) => {
     if (formIoData) {
+      togglePasteEnabled(false)
+      
       setOtherResponses([''])
 
       const formData = {...formIoData};
       
       const currentIndex = formData.data.components[index];
 
-
+      if (currentIndex?.properties?.pasteEnabled === '1') {
+        togglePasteEnabled(true)
+      }
       // Logic for disabling the bot based on the disableBot property in the form question's custom properties
       // It can look for disableBot = true or check a condition from the form variables passed in through the JSON data
       if (currentIndex?.properties?.hasOwnProperty('disableBot')) {
