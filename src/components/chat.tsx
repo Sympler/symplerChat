@@ -11,6 +11,7 @@ import {
   toggleInputDisabled,
   toggleForcedScreenRecorder,
   togglePasteEnabled,
+  setMinCharLimit,
 } from "react-chat-widget-custom";
 import "react-chat-widget-custom/lib/styles.css";
 import axios from "axios";
@@ -1043,6 +1044,11 @@ const SymplerChat: React.FC<ChatProps> = ({
       if (currentIndex?.properties?.pasteEnabled === "1") {
         togglePasteEnabled(true);
       }
+      if (currentIndex?.properties?.minCharLimit) {
+        setMinCharLimit(+currentIndex.properties?.minCharLimit)
+      } else {
+        setMinCharLimit(null)
+      }
       // Logic for disabling the bot based on the disableBot property in the form question's custom properties
       // It can look for disableBot = true or check a condition from the form variables passed in through the JSON data
       if (currentIndex?.properties?.hasOwnProperty("disableBot")) {
@@ -1482,7 +1488,7 @@ const SymplerChat: React.FC<ChatProps> = ({
         ) {
           let videos =
             formData.data.components[index].properties.videos.split(",");
-          if (path && path !== "" && path !== "[PATH_1]") {
+          if (path && path.trim() !== "" && path !== "[PATH_1]") {
             const pathNumber = path.split("_")[1].replace("]", "");
             const questionKey = `question${pathNumber}Videos`;
             if (formData.data.components[index].properties[questionKey]) {
