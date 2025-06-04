@@ -406,6 +406,12 @@ const SymplerChat: React.FC<ChatProps> = ({
             (s) => Object.keys(s.data).length === questionCount - 1,
           );
           if (completedSubmissions.length >= parseInt(quota)) {
+            const link = formIoData.data.components.find(
+              (c) => c.label === "SubmissionQuota",
+            )?.properties.rejectionLink;
+            if (link && link !== '') {
+              setRejectionLink(link)
+            }
             setIndex(1000);
           }
         };
@@ -1663,11 +1669,20 @@ const SymplerChat: React.FC<ChatProps> = ({
               filteredQBOptions.map((v) => (v.value = v.label));
               quickButtonOptions = filteredQBOptions;
               if (filteredQBOptions.length <= 0) {
+                const filteredQBOptions2 = originalObject?.data.components[
+                  index
+                ].data.values.filter((qb) => qb.value.includes('PATH_1'));
+                filteredQBOptions2.map((v) => (v.value = v.label));
                 formData.data.components[index].data.values?.map(
                   (v) => (v.value = v.label),
                 );
-                quickButtonOptions =
+                if (filteredQBOptions2.length <= 0) {
+                  quickButtonOptions =
                   formData.data.components[index].data.values;
+                } else {
+                  quickButtonOptions = filteredQBOptions2
+                }
+
               }
             } else {
               formData.data.components[index].data.values?.map(
@@ -1744,7 +1759,7 @@ const SymplerChat: React.FC<ChatProps> = ({
         emojis
         handleNewUserMessage={askQuestion}
         title="Messages"
-        subtitle="Sympler"
+        subtitle="Okay Human"
         handleQuickButtonClicked={handleQuickButtonClick}
         imagePreview={true}
         isNumeric={isNumeric}

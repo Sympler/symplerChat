@@ -1,5 +1,5 @@
 import React from 'react';
-
+import logo from '../okay-human.png'
 
 const NavBar: React.FC = () => {
 
@@ -70,7 +70,8 @@ const NavBar: React.FC = () => {
   return (
     <div style={{width: '25vw'}}>
       <div style={{width: '175px', margin: 'auto', paddingTop: '4rem'}}>
-        <BrandLogo/>
+        {/* <BrandLogo/> */}
+        <img src={logo} style={{maxWidth: '230px'}} />
       </div>
     </div>
   );
