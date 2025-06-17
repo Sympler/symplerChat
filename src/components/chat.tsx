@@ -150,6 +150,7 @@ const SymplerChat: React.FC<ChatProps> = ({
   const [pathChanged, setPathChanged] = useState(false);
   const [imageOrder, setImageOrder] = useState("");
   const [usedRandomImages, setUsedRandomImages] = useState<string[]>([]);
+  const [subtitle, setSubtitle] = useState('')
 
   useEffect(() => {
     if (jsonData) {
@@ -160,6 +161,13 @@ const SymplerChat: React.FC<ChatProps> = ({
       setFormVariables([...formVariables, ...formattedData]);
     }
   }, [jsonData]);
+
+  useEffect(() => {
+    if (!formIoData) return
+    setSubtitle(formIoData.data.components.find(
+      (c) => c.label === "Subtitle",
+    )?.defaultValue ?? "")
+  }, [formIoData])
 
   const setCookie = (cname: string, exdays: number, cvalue?: string) => {
     const d = new Date();
@@ -1759,7 +1767,7 @@ const SymplerChat: React.FC<ChatProps> = ({
         emojis
         handleNewUserMessage={askQuestion}
         title="Messages"
-        subtitle="Okay Human"
+        subtitle={(subtitle && subtitle !== "") ? subtitle : "Okay Human"}
         handleQuickButtonClicked={handleQuickButtonClick}
         imagePreview={true}
         isNumeric={isNumeric}
