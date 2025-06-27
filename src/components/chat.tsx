@@ -92,6 +92,20 @@ interface ResolvePaths {
   value: string;
 }
 
+// Helper to convert data URL to Blob
+function dataURLtoBlob(dataurl: string) {
+  const arr = dataurl.split(',');
+  const mimeMatch = arr[0].match(/:(.*?);/);
+  const mime = mimeMatch ? mimeMatch[1] : '';
+  const bstr = atob(arr[1]);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n);
+  }
+  return new Blob([u8arr], { type: mime });
+}
+
 const SymplerChat: React.FC<ChatProps> = ({
   formName,
   endpoint,
@@ -735,74 +749,100 @@ const SymplerChat: React.FC<ChatProps> = ({
               }
             }
             if (message.includes("data:")) {
-              const base64Source = message.slice(
-                message.indexOf("(") + 1,
-                message.lastIndexOf(")"),
-              );
-              const base64Response = await fetch(base64Source);
-              const blob = await base64Response.blob();
-              const getExtension = (type: string) => {
-                interface lookUpProps {
-                  [key: string]: string;
-                }
-                const lookUp: lookUpProps = {
-                  "video/mp4": ".mp4",
-                  "video/webm": ".webm",
-                  "video/ogg": ".ogg",
-                  "image/jpeg": ".jpg",
-                  "image/png": ".png",
-                  "image/gif": ".gif",
-                };
-                if (lookUp[type]) {
-                  return lookUp[type];
-                } else if (type.includes("video")) {
-                  return ".mp4";
-                } else if (type.includes("image")) {
-                  return ".jpg";
-                } else {
-                  return "";
-                }
-              };
-              const file = new File(
-                [blob],
-                `${formIoData.data.title.replaceAll(" ", "") + "_" + formIoData.data.components[index].key.substring(0, 30)}_fileUpload_${Date.now()}${getExtension(blob.type)}`,
-                { type: blob.type },
-              );
-              // const file = blob.type === 'video/mp4' ? new File([blob],  `${formIoData.data.components[index].key.substring(0, 30)}_fileUpload_${new Date()}.mp4`, {type: 'video/mp4'}) : new File([blob],  `${formIoData.data.components[index].key.substring(0, 30)}_fileUpload_${new Date()}`)
-              var formData = new FormData();
-              formData.append("file", file);
-              toggleMsgLoader();
-              await axios
-                .post(
-                  `https://dash-api.sympler.co/api/v1/uploadimage`,
-                  formData,
-                )
-                .then((result) => {
+              const mediaMatches = Array.from(message.matchAll(/!\[\]\(data:(.*?)\)/g)).map(m => "data:" + m[1]);
+              let userText = message.substring(0, message.indexOf('![]'));
+              // Process all media files in parallel and wait for all to complete
+              const mediaPromises = mediaMatches.map(async (match) => {
+                try {
+                  console.log('Processing base64 source:', match.substring(0, 50) + '...');
+                  const blob = dataURLtoBlob(match);
+                  
+                  // Validate blob
+                  if (blob.size === 0) {
+                    throw new Error('Blob is empty');
+                  }
+                  
+                  const getExtension = (type: string) => {
+                    interface lookUpProps {
+                      [key: string]: string;
+                    }
+                    const lookUp: lookUpProps = {
+                      "video/mp4": ".mp4",
+                      "video/webm": ".webm",
+                      "video/ogg": ".ogg",
+                      "image/jpeg": ".jpg",
+                      "image/png": ".png",
+                      "image/gif": ".gif",
+                      "image/webp": ".webp",
+                    };
+                    if (lookUp[type]) {
+                      return lookUp[type];
+                    } else if (type.includes("video")) {
+                      return ".mp4";
+                    } else if (type.includes("image")) {
+                      return ".jpg";
+                    } else {
+                      return "";
+                    }
+                  };
+                  
+                  const extension = getExtension(blob.type);
+                  console.log('Determined extension:', extension, 'for type:', blob.type);
+                  
+                  const file = new File(
+                    [blob],
+                    `${formIoData.data.title.replaceAll(" ", "") + "_" + formIoData.data.components[index].key.substring(0, 30)}_fileUpload_${Date.now()}${extension}`,
+                    { type: blob.type },
+                  );
+                  var formData = new FormData();
+                  formData.append("file", file);
                   toggleMsgLoader();
-                  const imageMessage = result.data.file;
-                  obj[key] = imageMessage;
-                  axios
-                    .put(`${formIoUrl}/submission/${formSubmissionId}`, {
-                      data: {
-                        ...obj,
-                        ...previousData,
-                      },
-                    })
-                    .then((result) => {
-                      // if (formIoData.data.components[index].disabled === true) {
-                      //   toggleInputDisabled(false)
-                      // }
-                      setIndex((index) => index + 1);
-                      setSubmit(false);
-                    })
-                    .catch((error) => {
-                      Sentry.captureException(error);
-                      console.error("error", error);
-                    });
-                })
-                .catch((error) => {
-                  console.error("error sending the image to sympler", error);
+                  
+                  const result = await axios.post(
+                    `https://dash-api.sympler.co/api/v1/uploadimage`,
+                    formData,
+                  );
+                  toggleMsgLoader();
+                  return result.data.file;
+                } catch (error) {
+                  console.error("error processing file:", match, error);
+                  toggleMsgLoader();
+                  throw error;
+                }
+              });
+
+              try {
+                // Wait for all media files to be uploaded
+                const uploadedFiles = await Promise.all(mediaPromises);
+                
+                // Combine all uploaded files into the object
+                obj[key] = (userText.trim().length > 0 ? userText.trim() + ', ' : '') + uploadedFiles.join(",");
+                
+                // Update the form submission with all uploaded files
+                await axios.put(`${formIoUrl}/submission/${formSubmissionId}`, {
+                  data: {
+                    ...obj,
+                    ...previousData,
+                  },
                 });
+                
+                // Only increment index after all files have been processed
+                setIndex((index) => index + 1);
+                setSubmit(false);
+              } catch (error) {
+                console.error("Error processing media files:", error);
+                Sentry.captureException(error);
+                
+                // If some files failed, try to continue with the ones that succeeded
+                if (error instanceof Error && error.message.includes('Promise.all')) {
+                  console.log("Some files failed to upload, but continuing with successful ones");
+                  // You could implement partial success handling here if needed
+                }
+                
+                // Still increment index to avoid getting stuck
+                setIndex((index) => index + 1);
+                setSubmit(false);
+              }
             } else {
               obj[key] = message;
               // if (path && path !== "") {
@@ -1267,7 +1307,16 @@ const SymplerChat: React.FC<ChatProps> = ({
         setSubmit(true);
         await submitData(" ", index);
         return;
-      } else if (
+      } else if (formData.data.components[index].key === 'submissionQuota') {
+        setSubmit(true);
+        await submitData(" ", index);
+        return;
+      } else if (formData.data.components[index].key === 'subtitle') {
+        setSubmit(true);
+        await submitData(" ", index);
+        return;
+      }
+      else if (
         formData.data.components[index].label.includes("RandomImagePerQuestion")
       ) {
         setSubmit(true);
