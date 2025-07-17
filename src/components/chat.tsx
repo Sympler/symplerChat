@@ -824,11 +824,12 @@ const SymplerChat: React.FC<ChatProps> = ({
                     ...obj,
                     ...previousData,
                   },
+                }).then((res) => {
+                  // Only increment index after all files have been processed
+                  setIndex((index) => index + 1);
+                  setSubmit(false);
                 });
                 
-                // Only increment index after all files have been processed
-                setIndex((index) => index + 1);
-                setSubmit(false);
               } catch (error) {
                 console.error("Error processing media files:", error);
                 Sentry.captureException(error);
@@ -1369,6 +1370,7 @@ const SymplerChat: React.FC<ChatProps> = ({
         } else {
           setQuickButtons([]);
         }
+        return;
       } else if (index !== 1000) {
         let responseText = currentIndex?.label;
 
