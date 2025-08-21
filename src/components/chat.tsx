@@ -411,7 +411,7 @@ const SymplerChat: React.FC<ChatProps> = ({
       const quota = formIoData.data.components.find(
         (c) => c.label === "SubmissionQuota",
       )?.defaultValue;
-      const questionCount = formIoData.data.components.length;
+      const lastQuestion = formIoData.data.components[formIoData.data.components.length - 2]
       if (quota) {
         const getSubmissons = async () => {
           interface Submissions {
@@ -425,8 +425,8 @@ const SymplerChat: React.FC<ChatProps> = ({
             `${formIoUrl}/submission?limit=1000`,
           );
           const completedSubmissions = submissions.data.filter(
-            (s) => Object.keys(s.data).length === questionCount - 1,
-          );
+            (s) => s.data.hasOwnProperty(lastQuestion.key)
+          ) 
           if (completedSubmissions.length >= parseInt(quota)) {
             const link = formIoData.data.components.find(
               (c) => c.label === "SubmissionQuota",
